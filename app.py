@@ -66,8 +66,6 @@ st.write("""ID	Sentiment
     # User selects what the label SHOULD have been
     correct_label = st.selectbox(
         "What is the correct sentiment (0-6)?", 
-
- 
         options=[0, 1, 2, 3, 4, 5, 6],
         index=3 # Defaults to Neutral
     )
