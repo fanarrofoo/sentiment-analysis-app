@@ -58,8 +58,8 @@ with st.expander("Report an incorrect prediction"):
     
     # User selects what the label SHOULD have been
     correct_label = st.selectbox(
-        "What is the correct sentiment (0-6)?", 
-        options=[0, 1, 2, 3, 4, 5, 6],
+        "What is the correct sentiment (0-6)?",  
+        options=[0	Sadness, 1	Happines, 2	Fear, 3	Anger, 4	Disgust, 5	Surprise, 6	Sarcastic],
         index=3 # Defaults to Neutral
     )
     
