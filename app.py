@@ -55,8 +55,8 @@ st.subheader("🛠️ Help Improve the AI")
 
 with st.expander("Report an incorrect prediction"):
     st.write("If the model got this wrong, please let us know the correct sentiment from the list below:")
-st.write("""ID	Sentiment,
-0	Sadness,
+st.write("""ID	Sentiment
+0	Sadness
 1	Happines
 2	Fear
 3	Anger
