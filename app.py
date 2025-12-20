@@ -29,8 +29,8 @@ sentiment_map = {
 }
 
 # 3. App UI Layout
-st.set_page_config(page_title="Sentiment Analyzer", page_icon="📊")
-st.title("Sentiment Analysis Web App")
+st.set_page_config(page_title="Sentiment Analyzer", page_icon="🪄")
+st.title("Kurdish Sentiment Analysis")
 st.write("By Fanar Rofoo")
 st.write("This sentiment analysis app is the culmination of PhD research, employing a LinearSVC model that achieves 86% accuracy in classifying sentiment across seven distinct categories. The model is trained on a rich, purpose-built dataset collected from social media platforms, providing a nuanced and real-world understanding of contemporary emotional expression.")
 
