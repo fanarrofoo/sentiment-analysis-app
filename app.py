@@ -55,14 +55,14 @@ st.subheader("🛠️ Help Improve the AI")
 
 with st.expander("Report an incorrect prediction"):
     st.write("If the model got this wrong, please let us know the correct sentiment from the list below:")
-    st.write("""ID	Sentiment
-0	Sadness
-1	Happines
-2	Fear
-3	Anger
-4	Disgust
-5	Surprise
-6	Sarcastic""")
+    st.write("""ID	Sentiment \n
+0	Sadness \n
+1	Happines \n
+2	Fear \n
+3	Anger \n
+4	Disgust \n
+5	Surprise \n
+6	Sarcastic \n """)
     # User selects what the label SHOULD have been
     correct_label = st.selectbox(
         "What is the correct sentiment (0-6)?", 
