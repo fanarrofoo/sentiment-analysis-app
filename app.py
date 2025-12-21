@@ -10,6 +10,51 @@ app_mode = st.sidebar.radio("Go to:", ["Sentiment Analyzer", "User Guide"])
 
 if app_mode == "User Guide":
     render_user_guide()  # We will define this function below
+    def render_user_guide():
+    st.title("📖 User Guide & Instructions")
+    st.write("Thank you for participating in this Kurdish NLP research. Please follow these steps to use the tool effectively.")
+    
+    st.divider()
+    
+    # --- Step 1 ---
+    st.subheader("1. Entering Text")
+    st.write("""
+    * Type or paste your Kurdish sentence into the text area.
+    * **Note:** The model is optimized for Kurdish. Using other languages may result in inaccurate predictions.
+    * Click the **'Analyze Sentiment'** button.
+    """)
+    
+    # --- Step 2 ---
+    st.subheader("2. Understanding Results")
+    st.write("""
+    The AI will classify your text into one of seven categories:
+    * **Happiness / Sadness / Fear / Anger**: Standard emotional states.
+    * **Surprise**: For unexpected events.
+    * **Disgust**: For expressing strong dislike.
+    * **Sarcastic**: For sentences where the meaning is the opposite of the words used.
+    """)
+    
+    # --- Step 3 ---
+    st.subheader("3. Providing Feedback (Crucial for Research)")
+    st.write("""
+    If you feel the AI made a mistake:
+    1. Scroll down to **'Report an incorrect prediction'**.
+    2. Select what you believe is the **correct** sentiment from the dropdown.
+    3. Read the **Privacy Notice** and check the **Consent Box**.
+    4. Click **'Submit Feedback'**.
+    """)
+    
+    st.info("💡 Your feedback directly helps retrain the model to better understand Kurdish linguistic nuances.")
+    
+    # --- Step 4 ---
+    st.subheader("4. Technical FAQ")
+    with st.expander("Is my data saved?"):
+        st.write("Only if you click 'Submit Feedback'. Regular analysis is not permanently logged.")
+    
+    with st.expander("Why did it get my sentence wrong?"):
+        st.write("Sentiment analysis is complex, especially in Kurdish due to various dialects. Your corrections help the AI learn these differences!")
+
+    st.success("Ready to start? Switch to 'Sentiment Analyzer' in the sidebar!")
 else:
 # --- 1. Load Model & Vectorizer ---
 current_dir = os.path.dirname(os.path.abspath(__file__))
