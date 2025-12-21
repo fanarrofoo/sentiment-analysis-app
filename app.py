@@ -54,7 +54,7 @@ if st.session_state.prediction is not None:
     st.info(f"Class ID: {st.session_state.prediction}")
     
     if st.session_state.prediction >= 4: 
-        st.balloons()
+        st.success()
 
     # --- 5. Feedback Section ---
 if st.session_state.prediction is not None:
@@ -80,6 +80,6 @@ if st.session_state.prediction is not None:
             try:
                 # Insert into Supabase table
                 conn.table("sentiment_feedback").insert(feedback_data).execute()
-                st.success("✅ Thank you! Your feedback has been saved to Supabase.")
+                st.success("✅ Thank you! Your feedback has been sent to the developer.")
             except Exception as e:
                 st.error(f"Failed to save feedback: {e}")
