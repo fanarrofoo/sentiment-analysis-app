@@ -38,46 +38,69 @@ conn = st.connection("supabase", type=SupabaseConnection)
 st.sidebar.title("📌 Menu")
 app_mode = st.sidebar.radio("Go to:", ["Sentiment Analyzer", "User Guide"])
 
-# --- 4. Display Result (High Visibility + Confidence) ---
-# Only run this if we have a prediction in state
+# --- 1. Prediction Logic (Inside the Button) ---
+if st.button("Analyze Sentiment"):
+    if user_input.strip() == "":
+        st.warning("Please enter some text first.")
+    else:
+        # Vectorize and Predict
+        vec = tfidf.transform([user_input])
+        pred = model.predict(vec)[0]
+        
+        # Calculate Confidence (Softmax on Decision Function)
+        decision_scores = model.decision_function(vec)[0]
+        exp_scores = np.exp(decision_scores - np.max(decision_scores))
+        probabilities = exp_scores / exp_scores.sum()
+        conf = probabilities[pred] * 100
+
+        # Define Color Map
+        color_map = {
+            0: "#1f77b4", 1: "#2ca02c", 2: "#9467bd", 
+            3: "#d62728", 4: "#8c564b", 5: "#ff7f0e", 6: "#e377c2"
+        }
+        
+        # Save EVERYTHING to session state so it persists
+        st.session_state.prediction = int(pred)
+        st.session_state.label = sentiment_map.get(int(pred), "Unknown")
+        st.session_state.confidence = conf
+        st.session_state.current_color = color_map.get(int(pred), "#f0f2f6")
+
+# --- 2. Display Logic (Outside the Button) ---
+# Use .get() to avoid the AttributeError if nothing is predicted yet
 if st.session_state.get('prediction') is not None:
     st.divider()
-
-    # 1. Calculate Confidence Scores
-    decision_scores = model.decision_function(vec)[0]
-    exp_scores = np.exp(decision_scores - np.max(decision_scores))
-    probabilities = exp_scores / exp_scores.sum()
-    confidence_pct = probabilities[st.session_state.prediction] * 100
-
-    # 2. Define colors
-    color_map = {
-        0: "#1f77b4", 1: "#2ca02c", 2: "#9467bd", 
-        3: "#d62728", 4: "#8c564b", 5: "#ff7f0e", 6: "#e377c2"
-    }
-    sentiment_color = color_map.get(st.session_state.prediction, "#f0f2f6")
-
-    # 3. Display the Visual Card
-    sentiment_html = f"""
-        <div style="
-            background-color: #f8f9fb; 
-            padding: 30px; 
-            border-radius: 15px; 
-            border-left: 15px solid {sentiment_color};
-            text-align: center;
-            box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
-            margin-bottom: 5px;">
-            <p style="color: #555; font-size: 18px; margin-bottom: 5px; font-weight: bold;">The AI detected:</p>
-            <h1 style="color: {sentiment_color}; margin: 0; font-size: 65px; text-transform: uppercase;">
-                {st.session_state.label}
-            </h1>
-        </div>
-    """
-    st.markdown(sentiment_html, unsafe_allow_html=True)
     
-    # 4. The Confidence Meter
-    st.write(f"**Model Confidence:** {confidence_pct:.1f}%")
-    st.progress(confidence_pct / 100)
-    st.success("✅ Analysis completed successfully!")
+    # Retrieve values from session state
+    label = st.session_state.label
+    conf_value = st.session_state.confidence
+    res_color = st.session_state.current_color
+
+    with st.container():
+        st.markdown("### 🔍 Analysis Result")
+        
+        # Render the Card with the Dynamic Color
+        sentiment_html = f"""
+            <div style="
+                background-color: #f8f9fb; 
+                padding: 30px; 
+                border-radius: 15px; 
+                border-left: 15px solid {res_color};
+                text-align: center;
+                box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
+                margin-bottom: 10px;">
+                <p style="color: #555; font-size: 18px; margin-bottom: 5px; font-weight: bold;">The AI detected:</p>
+                <h1 style="color: {res_color}; margin: 0; font-size: 65px; text-transform: uppercase;">
+                    {label}
+                </h1>
+            </div>
+        """
+        st.markdown(sentiment_html, unsafe_allow_html=True)
+        
+        # Display the Confidence Meter
+        st.write(f"**Model Confidence:** {conf_value:.1f}%")
+        st.progress(conf_value / 100)
+        
+        st.success("✅ Analysis completed successfully!")
 # --- 5. Main App Logic ---
 if app_mode == "User Guide":
     render_user_guide()
