@@ -3,6 +3,7 @@ import joblib
 import os
 import pandas as pd
 from st_supabase_connection import SupabaseConnection
+import plotly.express as px
 
 # --- 1. Load Model & Vectorizer ---
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -115,6 +116,44 @@ with st.expander("🔐 Admin Access"):
                 st.write(f"**Total Feedback Entries:** {len(df_admin)}")
             else:
                 st.info("No feedback entries found yet.")
+
+if response.data:
+    df_admin = pd.DataFrame(response.data)
+    
+    # --- Charting Logic ---
+    st.subheader("📊 Error Distribution")
+    st.write("Which sentiments are users reporting as the 'Correct' label?")
+
+    # Map the IDs to Names for the chart
+    df_admin['Label Name'] = df_admin['correct_label'].map(sentiment_map)
+    
+    # Create a frequency count
+    chart_data = df_admin['Label Name'].value_counts().reset_index()
+    chart_data.columns = ['Sentiment', 'Count']
+
+    # Create the Plotly Bar Chart
+    fig = px.bar(
+        chart_data, 
+        x='Sentiment', 
+        y='Count',
+        color='Sentiment',
+        labels={'Count': 'Number of Reports', 'Sentiment': 'Correct Category'},
+        template="plotly_white"
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+
+    # --- Data Table & Download ---
+    st.subheader("📋 Raw Feedback Logs")
+    st.dataframe(df_admin, use_container_width=True)
+    
+    csv = df_admin.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label="📥 Download Feedback as CSV",
+        data=csv,
+        file_name="kurdish_sentiment_feedback.csv",
+        mime="text/csv",
+    )
                 
         except Exception as e:
             st.error(f"Error fetching data: {e}")
