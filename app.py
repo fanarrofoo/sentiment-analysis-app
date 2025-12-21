@@ -48,8 +48,25 @@ with st.expander("📖 About this App"):
     By providing feedback on incorrect predictions, you are helping to refine the dataset. This "Human-in-the-loop" approach is vital for capturing the linguistic nuances of Kurdish dialects and sarcasm.
     """)
     
+# --- Data Privacy Section ---
+with st.expander("🔐 Data Privacy & Ethics"):
+    st.markdown("""
+    ### Your Privacy Matters
+    In accordance with academic research ethics and data protection principles (like GDPR), we are committed to protecting your privacy.
+    **1. What data is collected?**
+    We only collect the **Kurdish text** you provide and the **sentiment labels** (both AI-predicted and user-corrected). 
+    **2. Is my identity tracked?**
+    **No.** We do not collect names, email addresses, IP addresses, or any other personal identifiers. The data is completely **anonymized**.
+    **3. How is the data used?**
+    The logs are used exclusively for:
+    * Evaluating the performance of the LinearSVC model.
+    * Identifying linguistic patterns for PhD thesis analysis.
+    * Improving the dataset for future Kurdish NLP research.
+    **4. Data Security**
+    Your feedback is stored securely in a private Supabase database and will not be sold or shared with third-party advertisers.
+    **By using the "Submit Feedback" button, you consent to the storage of the entered text for the research purposes mentioned above.**
+    """)
 
-st.write("This sentiment analysis app is the culmination of PhD research, employing a LinearSVC model that achieves 86% accuracy.")
 conn = st.connection("supabase", type=SupabaseConnection)
 
 # --- 3. Prediction Logic ---
