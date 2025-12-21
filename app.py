@@ -22,7 +22,7 @@ sentiment_map = {
 }
 
 # --- 2. App UI Layout ---
-st.set_page_config(page_title="Sentiment Analyzer", page_icon="🪄")
+st.set_page_config(page_title="Sentiment Analyser", page_icon="🪄")
 st.title("Kurdish Sentiment Analysis")
 st.write("By Fanar Rofoo")
 st.write("This sentiment analysis app is the culmination of PhD research, employing a LinearSVC model that achieves 86% accuracy.")
@@ -86,3 +86,11 @@ if st.session_state.prediction is not None:
             df_feedback = pd.DataFrame([feedback_data])
             df_feedback.to_csv("feedback_log.csv", mode='a', header=not os.path.exists("feedback_log.csv"), index=False)
             st.success("✅ Thank you! Your feedback has been logged.")
+
+import streamlit as st
+
+# Streamlit automatically finds these in your secrets.toml or Cloud settings
+url = st.secrets["https://szzfwrfrimvmazwuijnv.supabase.co"]
+key = st.secrets["sb_publishable_6LDov-8TvPsxV-AFq3w_9w_PjRQxz53"]
+
+st.write(f"Connecting to: {url}")
