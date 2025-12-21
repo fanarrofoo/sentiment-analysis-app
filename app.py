@@ -104,8 +104,50 @@ supabase = init_connection()
 
 # 3. Test the connection (Example: Fetching from a table named 'mytable')
 try:
-    response = supabase.table("feedback").select("*").execute()
+    # Use the actual name of your table
+    response = supabase.table("sentiment_logs").select("*").execute()
     st.success("Successfully connected to Supabase!")
     st.write(response.data)
 except Exception as e:
     st.error(f"Connection failed: {e}")
+
+import streamlit as st
+
+# ... (Previous code where you initialized 'supabase') ...
+
+st.title("Sentiment Analysis & Data Logging")
+
+# 1. User Input
+user_text = st.text_area("Enter text to analyze:")
+
+if st.button("Analyze & Save"):
+    if user_text:
+        # 2. Perform Sentiment Analysis 
+        # (Replace this with your actual model logic)
+        # Example using a dummy result:
+        sentiment = "Positive" 
+        score = 0.95
+        
+        st.write(f"**Result:** {sentiment} ({score})")
+
+        # 3. Prepare data for Supabase
+        # The keys here must match your SQL column names exactly
+        data_to_save = {
+            "text_input": user_text,
+            "sentiment_label": sentiment,
+            "confidence_score": score
+        }
+
+        # 4. Insert into Supabase
+        try:
+            response = supabase.table("sentiment_logs").insert(data_to_save).execute()
+            
+            # Check if it worked
+            if response.data:
+                st.success("Analysis complete and data saved to Supabase!")
+            else:
+                st.error("Failed to save data.")
+        except Exception as e:
+            st.error(f"Error during save: {e}")
+    else:
+        st.warning("Please enter some text first.")
