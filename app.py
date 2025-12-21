@@ -21,7 +21,12 @@ def load_assets():
     return model, tfidf
 
 model, tfidf = load_assets()
-
+# --- Initialize Session State Variables ---
+# This ensures the variables exist so line 37 doesn't crash
+if 'prediction' not in st.session_state:
+    st.session_state.prediction = None
+if 'label' not in st.session_state:
+    st.session_state.label = None
 sentiment_map = {
     0: "Sadness", 1: "Happiness", 2: "Fear", 
     3: "Anger", 4: "Disgust", 5: "Surprise", 6: "Sarcastic"
@@ -34,54 +39,45 @@ st.sidebar.title("📌 Menu")
 app_mode = st.sidebar.radio("Go to:", ["Sentiment Analyzer", "User Guide"])
 
 # --- 4. Display Result (High Visibility + Confidence) ---
-if st.session_state.prediction is not None:
+# Only run this if we have a prediction in state
+if st.session_state.get('prediction') is not None:
     st.divider()
 
-    # 1. Technical: Calculate Confidence Scores
-    # LinearSVC uses decision_function to show how far a point is from the boundary
+    # 1. Calculate Confidence Scores
     decision_scores = model.decision_function(vec)[0]
-    
-    # We use the Softmax formula to turn these scores into pseudo-probabilities
-    # Softmax(x) = exp(x) / sum(exp(x))
-    exp_scores = np.exp(decision_scores - np.max(decision_scores)) # subtract max for numerical stability
+    exp_scores = np.exp(decision_scores - np.max(decision_scores))
     probabilities = exp_scores / exp_scores.sum()
     confidence_pct = probabilities[st.session_state.prediction] * 100
 
-    # 2. Define colors (keep your existing map)
+    # 2. Define colors
     color_map = {
         0: "#1f77b4", 1: "#2ca02c", 2: "#9467bd", 
         3: "#d62728", 4: "#8c564b", 5: "#ff7f0e", 6: "#e377c2"
     }
     sentiment_color = color_map.get(st.session_state.prediction, "#f0f2f6")
 
-    # 3. Display the UI Card
-    with st.container():
-        st.markdown("### 🔍 Analysis Result")
-        
-        sentiment_html = f"""
-            <div style="
-                background-color: #f8f9fb; 
-                padding: 30px; 
-                border-radius: 15px; 
-                border-left: 15px solid {sentiment_color};
-                text-align: center;
-                box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
-                margin-bottom: 5px;">
-                <p style="color: #555; font-size: 18px; margin-bottom: 5px; font-weight: bold;">The AI detected:</p>
-                <h1 style="color: {sentiment_color}; margin: 0; font-size: 65px; text-transform: uppercase;">
-                    {st.session_state.label}
-                </h1>
-            </div>
-        """
-        st.markdown(sentiment_html, unsafe_allow_html=True)
-        
-        # 4. The Confidence Meter
-        st.write(f"**Model Confidence:** {confidence_pct:.1f}%")
-        st.progress(confidence_pct / 100)
-        
-        # Add a small note for your PhD examiners
-        st.caption(f"Decision Strength: {decision_scores[st.session_state.prediction]:.2f} (Normalized via Softmax)")
-        st.success("✅ Analysis completed successfully!")
+    # 3. Display the Visual Card
+    sentiment_html = f"""
+        <div style="
+            background-color: #f8f9fb; 
+            padding: 30px; 
+            border-radius: 15px; 
+            border-left: 15px solid {sentiment_color};
+            text-align: center;
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 5px;">
+            <p style="color: #555; font-size: 18px; margin-bottom: 5px; font-weight: bold;">The AI detected:</p>
+            <h1 style="color: {sentiment_color}; margin: 0; font-size: 65px; text-transform: uppercase;">
+                {st.session_state.label}
+            </h1>
+        </div>
+    """
+    st.markdown(sentiment_html, unsafe_allow_html=True)
+    
+    # 4. The Confidence Meter
+    st.write(f"**Model Confidence:** {confidence_pct:.1f}%")
+    st.progress(confidence_pct / 100)
+    st.success("✅ Analysis completed successfully!")
 # --- 5. Main App Logic ---
 if app_mode == "User Guide":
     render_user_guide()
