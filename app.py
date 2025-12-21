@@ -92,75 +92,47 @@ with st.expander("🔐 Admin Access"):
     if password == st.secrets["ADMIN_PASSWORD"]:
         st.success("Access Granted")
         
+        # --- PART A: FETCH & VISUALIZE DATA ---
         try:
-            # 1. Fetch data from Supabase
             response = conn.table("sentiment_feedback").select("*").execute()
             
             if response.data:
                 df_admin = pd.DataFrame(response.data)
-                
-                # Create readable labels for the charts
                 df_admin['Predicted Name'] = df_admin['model_prediction'].map(sentiment_map)
                 df_admin['Correct Name'] = df_admin['correct_label'].map(sentiment_map)
 
-                # --- VISUALIZATION 1: Error Distribution (Bar Chart) ---
                 st.subheader("📊 Error Distribution")
                 chart_data = df_admin['Correct Name'].value_counts().reset_index()
                 chart_data.columns = ['Sentiment', 'Count']
-                fig_bar = px.bar(chart_data, x='Sentiment', y='Count', color='Sentiment', template="plotly_white")
-                st.plotly_chart(fig_bar, use_container_width=True)
+                st.plotly_chart(px.bar(chart_data, x='Sentiment', y='Count', color='Sentiment'), use_container_width=True)
 
-                # --- VISUALIZATION 2: Confusion Heatmap ---
                 st.subheader("🧠 Model Confusion Matrix")
-                st.write("Where is the model getting confused?")
-                
-                # Cross-tabulate predictions vs corrections
                 confusion_matrix = pd.crosstab(df_admin['Predicted Name'], df_admin['Correct Name'])
-                
-                fig_heat = px.imshow(
-                    confusion_matrix,
-                    text_auto=True,
-                    color_continuous_scale='RdBu_r',
-                    labels=dict(x="User Corrected Label", y="AI Predicted Label", color="Frequency")
-                )
-                st.plotly_chart(fig_heat, use_container_width=True)
+                st.plotly_chart(px.imshow(confusion_matrix, text_auto=True, color_continuous_scale='RdBu_r'), use_container_width=True)
 
-                # --- DATA TABLE & DOWNLOAD ---
                 st.subheader("📋 Raw Feedback Logs")
                 st.dataframe(df_admin, use_container_width=True)
                 
                 csv = df_admin.to_csv(index=False).encode('utf-8')
-                st.download_button(
-                    label="📥 Download Feedback as CSV",
-                    data=csv,
-                    file_name="kurdish_sentiment_feedback.csv",
-                    mime="text/csv",
-                )
-                    # --- 7. Danger Zone: Delete Logs ---
-st.markdown("---")
-st.subheader("⚠️ Danger Zone")
-st.write("Use this to clear the database once you've finished testing.")
-
-# Double-confirmation mechanism
-confirm_delete = st.checkbox("I want to permanently delete all feedback records.")
-if st.button("Delete All Logs", type="primary", disabled=not confirm_delete):
-    try:
-        # In Supabase, you must provide a filter to delete. 
-        # Using .neq("id", 0) effectively selects all rows.
-        conn.table("sentiment_feedback").delete().neq("id", 0).execute()
-        
-        st.success("💥 All records have been deleted. Please refresh the page.")
-        # Optional: Clear the session state to update the UI
-        st.rerun() 
-    except Exception as e:
-        st.error(f"Failed to delete records: {e}")
-        
-# end of danger zone
+                st.download_button("📥 Download Feedback as CSV", data=csv, file_name="kurdish_sentiment_feedback.csv", mime="text/csv")
             else:
                 st.info("No feedback entries found yet.")
-        
         except Exception as e:
-            # This 'except' block fixes the SyntaxError!
             st.error(f"Error fetching data: {e}")
+
+        # --- PART B: DANGER ZONE (Separate from the fetch try/except) ---
+        st.markdown("---")
+        st.subheader("⚠️ Danger Zone")
+        confirm_delete = st.checkbox("I want to permanently delete all feedback records.")
+        
+        if st.button("Delete All Logs", type="primary", disabled=not confirm_delete):
+            try:
+                # We use a filter that is always true to delete all rows
+                conn.table("sentiment_feedback").delete().neq("id", 0).execute()
+                st.success("💥 All records deleted!")
+                st.rerun() 
+            except Exception as e:
+                st.error(f"Deletion failed: {e}")
+            
     elif password:
         st.error("Incorrect password")
