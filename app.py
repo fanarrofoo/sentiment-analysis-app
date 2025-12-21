@@ -2,6 +2,7 @@ import streamlit as st
 import joblib
 import os
 import pandas as pd
+from st_supabase_connection import SupabaseConnection
 
 # --- 1. Load Model & Vectorizer ---
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -27,6 +28,7 @@ st.title("Kurdish Sentiment Analysis")
 st.write("By Fanar Rofoo")
 st.write("This sentiment analysis app is the culmination of PhD research, employing a LinearSVC model that achieves 86% accuracy.")
 conn = st.connection("supabase", type=SupabaseConnection)
+
 # --- 3. Prediction Logic ---
 user_input = st.text_area("Enter a sentence to analyse:", placeholder="Kurdish text only")
 
