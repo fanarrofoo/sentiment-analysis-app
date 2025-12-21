@@ -92,7 +92,6 @@ if st.session_state.prediction is not None:
 if st.session_state.prediction is not None:
     st.divider()
     st.subheader("🛠️ Help Improve the AI")
-    
     with st.expander("Report an incorrect prediction"):
         # (Keep your selectbox logic here...)
         st.markdown("""
