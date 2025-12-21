@@ -27,6 +27,28 @@ sentiment_map = {
 st.set_page_config(page_title="Sentiment Analyser", page_icon="🪄")
 st.title("Kurdish Sentiment Analysis")
 st.write("By Fanar Rofoo")
+# --- Research Methodology Section ---
+with st.expander("📖 About this Research"):
+    st.markdown("""
+    ### Methodology & Background
+    This tool is part of a **PhD research project** focused on enhancing **Kurdish Natural Language Processing (NLP)**. 
+    Kurdish is a "low-resource" language in the AI world, meaning there is less digital data available compared to English. 
+    This research aims to bridge that gap.
+
+    **How the Model Works:**
+    1.  **Preprocessing:** Your text is cleaned and converted into numerical data using **TF-IDF Vectorization**.
+    2.  **Classification:** We utilize a **Linear Support Vector Classifier (LinearSVC)**, which is highly effective for text classification tasks.
+    3.  **Accuracy:** During the validation phase, this model achieved an accuracy of **86%** across 7 sentiment categories.
+
+    **The 7 Sentiments Analyzed:**
+    * **0-3:** Sadness, Happiness, Fear, Anger
+    * **4-6:** Disgust, Surprise, Sarcastic (The 'Positive/Neutral' indicators)
+
+    **Your Role:**
+    By providing feedback on incorrect predictions, you are helping to refine the dataset. This "Human-in-the-loop" approach is vital for capturing the linguistic nuances of Kurdish dialects and sarcasm.
+    """)
+    
+
 st.write("This sentiment analysis app is the culmination of PhD research, employing a LinearSVC model that achieves 86% accuracy.")
 conn = st.connection("supabase", type=SupabaseConnection)
 
