@@ -101,13 +101,35 @@ if st.session_state.prediction is not None:
     st.divider()
     st.subheader("🛠️ Help Improve the AI")
     
-    with st.expander("Report an incorrect prediction"):
-        # (Keep your selectbox logic here...)
+    # --- Feedback Section with Explicit Consent ---
         correct_label = st.selectbox(
             "What is the correct sentiment (0-6)?", 
             options=list(sentiment_map.keys()),
             format_func=lambda x: f"{x} - {sentiment_map[x]}"
         )
+
+        # 1. The Consent Checkbox
+        st.info("💡 Your feedback helps improve Kurdish NLP research.")
+        consent_given = st.checkbox("I consent to the anonymized storage of this text for research purposes.")
+
+        # 2. The Button (Only enabled/visible if consent is checked)
+        if consent_given:
+            if st.button("Submit Feedback", type="primary"):
+                try:
+                    feedback_data = {
+                        "user_input": user_input,
+                        "model_prediction": int(st.session_state.prediction),
+                        "correct_label": int(correct_label)
+                    }
+                    
+                    # Insert into Supabase
+                    conn.table("sentiment_feedback").insert(feedback_data).execute()
+                    st.success("✅ Thank you! Your feedback has been safely logged.")
+                except Exception as e:
+                    st.error(f"Failed to save feedback: {e}")
+        else:
+            # Show a disabled or placeholder button to guide the user
+            st.button("Submit Feedback", help="Please check the consent box first", disabled=True)
         
         if st.button("Submit Feedback"):
             # Prepare data for Supabase
