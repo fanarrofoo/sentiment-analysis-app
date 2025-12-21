@@ -4,6 +4,7 @@ import os
 import pandas as pd
 from st_supabase_connection import SupabaseConnection
 import plotly.express as px
+import numpy as np
 
 # --- 1. App Configuration ---
 st.set_page_config(page_title="Sentiment Analyser", page_icon="🪄", layout="wide")
@@ -32,25 +33,55 @@ conn = st.connection("supabase", type=SupabaseConnection)
 st.sidebar.title("📌 Menu")
 app_mode = st.sidebar.radio("Go to:", ["Sentiment Analyzer", "User Guide"])
 
-# --- 4. User Guide Function ---
-def render_user_guide():
-    st.title("📖 User Guide & Instructions")
-    st.info("Thank you for participating in this Kurdish NLP research. Follow these steps to use the tool effectively.")
-    st.subheader("1. Entering Text")
-    st.write("Type or paste your Kurdish sentence into the text area. The model is optimized for Kurdish text only.")
-    st.subheader("2. Understanding Results")
-    st.write("The AI classifies text into 7 categories: Sadness, Happiness, Fear, Anger, Disgust, Surprise, and Sarcastic.")
-    st.subheader("3. Providing Feedback (PhD Research)")
-    st.write("If the AI is wrong, use the 'Report an incorrect prediction' section. You must check the **Consent Box** before submitting.")
-    st.success("Switch back to 'Sentiment Analyzer' in the sidebar to begin!")
+# --- 4. Display Result (High Visibility + Confidence) ---
+if st.session_state.prediction is not None:
     st.divider()
-    st.subheader("🌍 Contributing to Open Science")
-    st.write("""
-    Kurdish is currently categorized as a **low-resource language** in Artificial Intelligence. This means there is a significant lack of high-quality, labeled datasets available for researchers.
-    """)
-    st.info("""
-    **The Bigger Picture:** The feedback collected through this app may be processed and released as an **open-source anonymized dataset**. By contributing, you are not just helping one PhD project—you are helping future researchers build better AI tools for the Kurdish language.
-    """)
+
+    # 1. Technical: Calculate Confidence Scores
+    # LinearSVC uses decision_function to show how far a point is from the boundary
+    decision_scores = model.decision_function(vec)[0]
+    
+    # We use the Softmax formula to turn these scores into pseudo-probabilities
+    # Softmax(x) = exp(x) / sum(exp(x))
+    exp_scores = np.exp(decision_scores - np.max(decision_scores)) # subtract max for numerical stability
+    probabilities = exp_scores / exp_scores.sum()
+    confidence_pct = probabilities[st.session_state.prediction] * 100
+
+    # 2. Define colors (keep your existing map)
+    color_map = {
+        0: "#1f77b4", 1: "#2ca02c", 2: "#9467bd", 
+        3: "#d62728", 4: "#8c564b", 5: "#ff7f0e", 6: "#e377c2"
+    }
+    sentiment_color = color_map.get(st.session_state.prediction, "#f0f2f6")
+
+    # 3. Display the UI Card
+    with st.container():
+        st.markdown("### 🔍 Analysis Result")
+        
+        sentiment_html = f"""
+            <div style="
+                background-color: #f8f9fb; 
+                padding: 30px; 
+                border-radius: 15px; 
+                border-left: 15px solid {sentiment_color};
+                text-align: center;
+                box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
+                margin-bottom: 5px;">
+                <p style="color: #555; font-size: 18px; margin-bottom: 5px; font-weight: bold;">The AI detected:</p>
+                <h1 style="color: {sentiment_color}; margin: 0; font-size: 65px; text-transform: uppercase;">
+                    {st.session_state.label}
+                </h1>
+            </div>
+        """
+        st.markdown(sentiment_html, unsafe_allow_html=True)
+        
+        # 4. The Confidence Meter
+        st.write(f"**Model Confidence:** {confidence_pct:.1f}%")
+        st.progress(confidence_pct / 100)
+        
+        # Add a small note for your PhD examiners
+        st.caption(f"Decision Strength: {decision_scores[st.session_state.prediction]:.2f} (Normalized via Softmax)")
+        st.success("✅ Analysis completed successfully!")
 # --- 5. Main App Logic ---
 if app_mode == "User Guide":
     render_user_guide()
