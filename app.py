@@ -90,7 +90,7 @@ if st.session_state.prediction is not None:
 import streamlit as st
 
 # Streamlit automatically finds these in your secrets.toml or Cloud settings
-url = st.secrets["https://szzfwrfrimvmazwuijnv.supabase.co"]
-key = st.secrets["sb_publishable_6LDov-8TvPsxV-AFq3w_9w_PjRQxz53"]
+url = st.secrets["SUPABASE_URL"]
+key = st.secrets["SUPABASE_KEY"]
 
 st.write(f"Connecting to: {url}")
