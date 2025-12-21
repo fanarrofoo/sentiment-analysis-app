@@ -5,7 +5,16 @@ import pandas as pd
 from st_supabase_connection import SupabaseConnection
 import plotly.express as px
 import numpy as np
-
+# --- Initialize ALL Session State Variables ---
+if 'prediction' not in st.session_state:
+    st.session_state.prediction = None
+if 'label' not in st.session_state:
+    st.session_state.label = None
+if 'confidence' not in st.session_state:
+    st.session_state.confidence = 0.0
+if 'current_color' not in st.session_state:
+    st.session_state.current_color = "#f0f2f6"
+    
 # --- 1. App Configuration ---
 st.set_page_config(page_title="Sentiment Analyser", page_icon="🪄", layout="wide")
 
@@ -38,47 +47,18 @@ conn = st.connection("supabase", type=SupabaseConnection)
 st.sidebar.title("📌 Menu")
 app_mode = st.sidebar.radio("Go to:", ["Sentiment Analyzer", "User Guide"])
 
-# --- 1. Prediction Logic (Inside the Button) ---
-if st.button("Analyze Sentiment"):
-    if user_input.strip() == "":
-        st.warning("Please enter some text first.")
-    else:
-        # Vectorize and Predict
-        vec = tfidf.transform([user_input])
-        pred = model.predict(vec)[0]
-        
-        # Calculate Confidence (Softmax on Decision Function)
-        decision_scores = model.decision_function(vec)[0]
-        exp_scores = np.exp(decision_scores - np.max(decision_scores))
-        probabilities = exp_scores / exp_scores.sum()
-        conf = probabilities[pred] * 100
-
-        # Define Color Map
-        color_map = {
-            0: "#1f77b4", 1: "#2ca02c", 2: "#9467bd", 
-            3: "#d62728", 4: "#8c564b", 5: "#ff7f0e", 6: "#e377c2"
-        }
-        
-        # Save EVERYTHING to session state so it persists
-        st.session_state.prediction = int(pred)
-        st.session_state.label = sentiment_map.get(int(pred), "Unknown")
-        st.session_state.confidence = conf
-        st.session_state.current_color = color_map.get(int(pred), "#f0f2f6")
-
-# --- 2. Display Logic (Outside the Button) ---
-# Use .get() to avoid the AttributeError if nothing is predicted yet
+# --- 4. Display Result (Safe Access) ---
 if st.session_state.get('prediction') is not None:
     st.divider()
     
-    # Retrieve values from session state
-    label = st.session_state.label
-    conf_value = st.session_state.confidence
-    res_color = st.session_state.current_color
+    # Using .get() with a default value prevents AttributeError
+    label = st.session_state.get('label', 'Unknown')
+    conf_value = st.session_state.get('confidence', 0.0)
+    res_color = st.session_state.get('current_color', "#f0f2f6")
 
     with st.container():
         st.markdown("### 🔍 Analysis Result")
         
-        # Render the Card with the Dynamic Color
         sentiment_html = f"""
             <div style="
                 background-color: #f8f9fb; 
@@ -99,7 +79,6 @@ if st.session_state.get('prediction') is not None:
         # Display the Confidence Meter
         st.write(f"**Model Confidence:** {conf_value:.1f}%")
         st.progress(conf_value / 100)
-        
         st.success("✅ Analysis completed successfully!")
 # --- 5. Main App Logic ---
 if app_mode == "User Guide":
