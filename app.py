@@ -91,52 +91,44 @@ with st.expander("🔐 Admin Access"):
     
     if password == st.secrets["ADMIN_PASSWORD"]:
         st.success("Access Granted")
-        st.subheader("Recent Feedback Data")
         
         try:
-            # Fetch data from Supabase
+            # 1. Fetch data from Supabase
             response = conn.table("sentiment_feedback").select("*").execute()
             
             if response.data:
                 df_admin = pd.DataFrame(response.data)
-                # --- Charting Logic ---
-    st.subheader("📊 Error Distribution")
-    st.write("Which sentiments are users reporting as the 'Correct' label?")
+                
+                # Create readable labels for the charts
+                df_admin['Predicted Name'] = df_admin['model_prediction'].map(sentiment_map)
+                df_admin['Correct Name'] = df_admin['correct_label'].map(sentiment_map)
 
-    # Map the IDs to Names for the chart
-    df_admin['Label Name'] = df_admin['correct_label'].map(sentiment_map)
-    
-    # Create a frequency count
-    chart_data = df_admin['Label Name'].value_counts().reset_index()
-    chart_data.columns = ['Sentiment', 'Count']
+                # --- VISUALIZATION 1: Error Distribution (Bar Chart) ---
+                st.subheader("📊 Error Distribution")
+                chart_data = df_admin['Correct Name'].value_counts().reset_index()
+                chart_data.columns = ['Sentiment', 'Count']
+                fig_bar = px.bar(chart_data, x='Sentiment', y='Count', color='Sentiment', template="plotly_white")
+                st.plotly_chart(fig_bar, use_container_width=True)
 
-    # Create the Plotly Bar Chart
-    fig = px.bar(
-        chart_data, 
-        x='Sentiment', 
-        y='Count',
-        color='Sentiment',
-        labels={'Count': 'Number of Reports', 'Sentiment': 'Correct Category'},
-        template="plotly_white"
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
+                # --- VISUALIZATION 2: Confusion Heatmap ---
+                st.subheader("🧠 Model Confusion Matrix")
+                st.write("Where is the model getting confused?")
+                
+                # Cross-tabulate predictions vs corrections
+                confusion_matrix = pd.crosstab(df_admin['Predicted Name'], df_admin['Correct Name'])
+                
+                fig_heat = px.imshow(
+                    confusion_matrix,
+                    text_auto=True,
+                    color_continuous_scale='RdBu_r',
+                    labels=dict(x="User Corrected Label", y="AI Predicted Label", color="Frequency")
+                )
+                st.plotly_chart(fig_heat, use_container_width=True)
 
-    # --- Data Table & Download ---
-    st.subheader("📋 Raw Feedback Logs")
-    st.dataframe(df_admin, use_container_width=True)
-    
-    csv = df_admin.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        label="📥 Download Feedback as CSV",
-        data=csv,
-        file_name="kurdish_sentiment_feedback.csv",
-        mime="text/csv",
-    )
-                # Make the dataframe look nicer
+                # --- DATA TABLE & DOWNLOAD ---
+                st.subheader("📋 Raw Feedback Logs")
                 st.dataframe(df_admin, use_container_width=True)
                 
-                # Add a download button for your PhD research CSV
                 csv = df_admin.to_csv(index=False).encode('utf-8')
                 st.download_button(
                     label="📥 Download Feedback as CSV",
@@ -146,8 +138,10 @@ with st.expander("🔐 Admin Access"):
                 )
             else:
                 st.info("No feedback entries found yet.")
-        
+                
         except Exception as e:
+            # This 'except' block fixes the SyntaxError!
             st.error(f"Error fetching data: {e}")
+            
     elif password:
         st.error("Incorrect password")
