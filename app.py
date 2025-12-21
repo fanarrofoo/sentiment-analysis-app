@@ -117,8 +117,8 @@ with st.expander("🔐 Admin Access"):
             else:
                 st.info("No feedback entries found yet.")
 
-if response.data:
-    df_admin = pd.DataFrame(response.data)
+#if response.data:
+  #  df_admin = pd.DataFrame(response.data)
     
     # --- Charting Logic ---
     st.subheader("📊 Error Distribution")
