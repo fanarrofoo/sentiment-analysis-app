@@ -2,6 +2,7 @@ import streamlit as st
 import joblib
 import os
 import pandas as pd
+from st_supabase_connection import SupabaseConnection
 
 # --- 1. Load Model & Vectorizer ---
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -26,7 +27,7 @@ st.set_page_config(page_title="Sentiment Analyser", page_icon="🪄")
 st.title("Kurdish Sentiment Analysis")
 st.write("By Fanar Rofoo")
 st.write("This sentiment analysis app is the culmination of PhD research, employing a LinearSVC model that achieves 86% accuracy.")
-
+conn = st.connection("supabase", type=SupabaseConnection)
 # --- 3. Prediction Logic ---
 user_input = st.text_area("Enter a sentence to analyse:", placeholder="Kurdish text only")
 
@@ -51,16 +52,16 @@ if st.session_state.prediction is not None:
     st.subheader(f"Predicted Sentiment: **{st.session_state.label}**")
     st.info(f"Class ID: {st.session_state.prediction}")
     
-    if st.session_state.prediction >= 4: 
-        st.balloons()
+#  if st.session_state.prediction >= 4: 
+#     st.balloons()
 
     # --- 5. Feedback Section ---
     st.divider()
     st.subheader("🛠️ Help Improve the AI")
-    
+""" 
     with st.expander("Report an incorrect prediction"):
         # Fixed the formatting for the table view
-        st.markdown("""
+        st.markdown("
         **ID | Sentiment** 0 | Sadness  
         1 | Happiness  
         2 | Fear  
@@ -68,7 +69,7 @@ if st.session_state.prediction is not None:
         4 | Disgust  
         5 | Surprise  
         6 | Sarcastic
-        """)
+        ")
         
         correct_label = st.selectbox(
             "What is the correct sentiment (0-6)?", 
@@ -86,3 +87,46 @@ if st.session_state.prediction is not None:
             df_feedback = pd.DataFrame([feedback_data])
             df_feedback.to_csv("feedback_log.csv", mode='a', header=not os.path.exists("feedback_log.csv"), index=False)
             st.success("✅ Thank you! Your feedback has been logged.")
+"""
+
+if st.session_state.prediction is not None:
+    st.divider()
+    st.subheader("🛠️ Help Improve the AI")
+    
+    with st.expander("Report an incorrect prediction"):
+        # (Keep your selectbox logic here...)
+        st.markdown("""
+        **ID | Sentiment** 0 | Sadness  
+        1 | Happiness  
+        2 | Fear  
+        3 | Anger  
+        4 | Disgust  
+        5 | Surprise  
+        6 | Sarcastic
+        """)
+        
+        correct_label = st.selectbox(
+            "What is the correct sentiment (0-6)?", 
+            options=list(sentiment_map.keys()),
+            format_func=lambda x: f"{x} - {sentiment_map[x]}"
+        )
+        correct_label = st.selectbox(
+            "What is the correct sentiment (0-6)?", 
+            options=list(sentiment_map.keys()),
+            format_func=lambda x: f"{x} - {sentiment_map[x]}"
+        )
+        
+        if st.button("Submit Feedback"):
+            # Prepare data for Supabase
+            feedback_data = {
+                "user_input": user_input,
+                "model_prediction": int(st.session_state.prediction),
+                "correct_label": int(correct_label)
+            }
+            
+            try:
+                # Insert into Supabase table
+                conn.table("sentiment_feedback").insert(feedback_data).execute()
+                st.success("✅ Thank you! Your feedback has been saved to Supabase.")
+            except Exception as e:
+                st.error(f"Failed to save feedback: {e}")
