@@ -28,7 +28,7 @@ st.set_page_config(page_title="Sentiment Analyser", page_icon="🪄")
 st.title("Kurdish Sentiment Analysis")
 st.write("By Fanar Rofoo")
 # --- Research Methodology Section ---
-with st.expander("📖 About this Research"):
+with st.expander("📖 About this App"):
     st.markdown("""
     ### Methodology & Background
     This tool is part of a **PhD research project** focused on enhancing **Kurdish Natural Language Processing (NLP)**. 
