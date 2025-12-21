@@ -36,18 +36,21 @@ app_mode = st.sidebar.radio("Go to:", ["Sentiment Analyzer", "User Guide"])
 def render_user_guide():
     st.title("📖 User Guide & Instructions")
     st.info("Thank you for participating in this Kurdish NLP research. Follow these steps to use the tool effectively.")
-    
     st.subheader("1. Entering Text")
     st.write("Type or paste your Kurdish sentence into the text area. The model is optimized for Kurdish text only.")
-    
     st.subheader("2. Understanding Results")
     st.write("The AI classifies text into 7 categories: Sadness, Happiness, Fear, Anger, Disgust, Surprise, and Sarcastic.")
-    
     st.subheader("3. Providing Feedback (PhD Research)")
     st.write("If the AI is wrong, use the 'Report an incorrect prediction' section. You must check the **Consent Box** before submitting.")
-    
     st.success("Switch back to 'Sentiment Analyzer' in the sidebar to begin!")
-
+    st.divider()
+    st.subheader("🌍 Contributing to Open Science")
+    st.write("""
+    Kurdish is currently categorized as a **low-resource language** in Artificial Intelligence. This means there is a significant lack of high-quality, labeled datasets available for researchers.
+    """)
+    st.info("""
+    **The Bigger Picture:** The feedback collected through this app may be processed and released as an **open-source anonymized dataset**. By contributing, you are not just helping one PhD project—you are helping future researchers build better AI tools for the Kurdish language.
+    """)
 # --- 5. Main App Logic ---
 if app_mode == "User Guide":
     render_user_guide()
