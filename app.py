@@ -88,9 +88,24 @@ if st.session_state.prediction is not None:
             st.success("✅ Thank you! Your feedback has been logged.")
 
 import streamlit as st
+from supabase import create_client, Client
 
-# Streamlit automatically finds these in your secrets.toml or Cloud settings
-url = st.secrets["SUPABASE_URL"]
-key = st.secrets["SUPABASE_KEY"]
+# 1. Retrieve credentials from st.secrets
+url: str = st.secrets["SUPABASE_URL"]
+key: str = st.secrets["SUPABASE_KEY"]
 
-st.write(f"Connecting to: {url}")
+# 2. Initialize the Supabase client
+# We use st.cache_resource so the connection persists across re-runs
+@st.cache_resource
+def init_connection():
+    return create_client(url, key)
+
+supabase = init_connection()
+
+# 3. Test the connection (Example: Fetching from a table named 'mytable')
+try:
+    response = supabase.table("mytable").select("*").execute()
+    st.success("Successfully connected to Supabase!")
+    st.write(response.data)
+except Exception as e:
+    st.error(f"Connection failed: {e}")
