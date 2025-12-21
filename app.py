@@ -5,6 +5,12 @@ import pandas as pd
 from st_supabase_connection import SupabaseConnection
 import plotly.express as px
 
+st.sidebar.title("📌 Menu")
+app_mode = st.sidebar.radio("Go to:", ["Sentiment Analyzer", "User Guide"])
+
+if app_mode == "User Guide":
+    render_user_guide()  # We will define this function below
+else:
 # --- 1. Load Model & Vectorizer ---
 current_dir = os.path.dirname(os.path.abspath(__file__))
 model_path = os.path.join(current_dir, 'sentiment_svc_model.pkl')
