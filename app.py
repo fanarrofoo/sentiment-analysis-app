@@ -60,8 +60,8 @@ else:
     st.title("Kurdish Sentiment Analysis")
     st.write("By Fanar Rofoo")
     
-    with st.expander("📖 About this Research"):
-        st.write("This PhD research employs a LinearSVC model (86% accuracy) to analyze Kurdish NLP.")
+    with st.expander("📖 About this App"):
+        st.write("This app is a part of PhD research, that employs a LinearSVC model (86% accuracy) to analyze Kurdish NLP.")
 
     with st.expander("🔐 Data Privacy & Ethics"):
         st.write("Data is anonymized. We only log the text and labels you provide for model improvement.")
@@ -81,11 +81,32 @@ else:
             st.session_state.prediction = model.predict(vec)[0]
             st.session_state.label = sentiment_map.get(st.session_state.prediction, "Unknown")
 
-    if st.session_state.prediction is not None:
-        st.divider()
-        st.subheader(f"Predicted Sentiment: **{st.session_state.label}**")
+    # --- 4. Display Result (High Visibility) ---
+if st.session_state.prediction is not None:
+    st.divider()
+    
+    # 1. Create a "Card" effect using a success box
+    with st.container():
+        st.markdown("### 🔍 Analysis Result")
+        
+        # This custom HTML makes the sentiment name very large and centered
+        sentiment_html = f"""
+            <div style="
+                background-color: #f0f2f6; 
+                padding: 20px; 
+                border-radius: 10px; 
+                border-left: 10px solid #00c0f2;
+                text-align: center;
+                margin-bottom: 20px;">
+                <p style="color: #31333F; font-size: 20px; margin: 0;">The AI detected:</p>
+                <h1 style="color: #ff4b4b; margin: 0; font-size: 60px;">{st.session_state.label}</h1>
+            </div>
+        """
+        st.markdown(sentiment_html, unsafe_allow_html=True)
+        
+        # Keep the formal class ID for your research records
+        st.write(f"**Classification Metadata:** Model ID {st.session_state.prediction}")
         st.success("✅ Analysis completed successfully!")
-
         # --- Feedback Section ---
         st.divider()
         with st.expander("🛠️ Help Improve the AI (Report Incorrect Prediction)"):
