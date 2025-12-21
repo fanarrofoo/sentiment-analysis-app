@@ -116,3 +116,8 @@ with st.expander("🔐 Admin Access"):
                 st.write(f"**Total Feedback Entries:** {len(df_admin)}")
             else:
                 st.info("No feedback entries found yet.")
+        
+        except Exception as e:
+            st.error(f"Error fetching data: {e}")
+    elif password:
+        st.error("Incorrect password")
