@@ -93,26 +93,36 @@ if st.session_state.prediction is not None:
     st.subheader(f"Predicted Sentiment: **{st.session_state.label}**")
     st.info(f"Class ID: {st.session_state.prediction}")
     
-#if st.session_state.prediction >=0:
-#    st.success("The operation was completed successfully.")
-    
- # --- 5. Feedback Section ---
-if st.session_state.prediction is not None:
+    if st.session_state.prediction >= 4: 
+        st.balloons()
+
+    # --- 5. Feedback Section ---
     st.divider()
     st.subheader("🛠️ Help Improve the AI")
     
-    # --- Feedback Section with Explicit Consent ---
+    with st.expander("Report an incorrect prediction"):
+        st.markdown("""
+        **ID | Sentiment**
+        0 | Sadness  
+        1 | Happiness  
+        2 | Fear  
+        3 | Anger  
+        4 | Disgust  
+        5 | Surprise  
+        6 | Sarcastic
+        """)
+        
         correct_label = st.selectbox(
             "What is the correct sentiment (0-6)?", 
             options=list(sentiment_map.keys()),
             format_func=lambda x: f"{x} - {sentiment_map[x]}"
         )
 
-        # 1. The Consent Checkbox
+        # Consent mechanism for PhD Ethics
         st.info("💡 Your feedback helps improve Kurdish NLP research.")
         consent_given = st.checkbox("I consent to the anonymized storage of this text for research purposes.")
 
-        # 2. The Button (Only enabled/visible if consent is checked)
+        # Submit button logic
         if consent_given:
             if st.button("Submit Feedback", type="primary"):
                 try:
@@ -121,30 +131,13 @@ if st.session_state.prediction is not None:
                         "model_prediction": int(st.session_state.prediction),
                         "correct_label": int(correct_label)
                     }
-                    
                     # Insert into Supabase
                     conn.table("sentiment_feedback").insert(feedback_data).execute()
                     st.success("✅ Thank you! Your feedback has been safely logged.")
                 except Exception as e:
                     st.error(f"Failed to save feedback: {e}")
         else:
-            # Show a disabled or placeholder button to guide the user
             st.button("Submit Feedback", help="Please check the consent box first", disabled=True)
-        
-        if st.button("Submit Feedback"):
-            # Prepare data for Supabase
-            feedback_data = {
-                "user_input": user_input,
-                "model_prediction": int(st.session_state.prediction),
-                "correct_label": int(correct_label)
-            }
-            
-            try:
-                # Insert into Supabase table
-                conn.table("sentiment_feedback").insert(feedback_data).execute()
-                st.success("✅ Thank you! Your feedback has been sent to the developer.")
-            except Exception as e:
-                st.error(f"Failed to save feedback: {e}")
 # --- 6. Admin Dashboard (Hidden) ---
 st.divider()
 with st.expander("🔐 Admin Access"):
