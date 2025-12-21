@@ -5,18 +5,15 @@ import pandas as pd
 from st_supabase_connection import SupabaseConnection
 import plotly.express as px
 
-st.sidebar.title("📌 Menu")
-app_mode = st.sidebar.radio("Go to:", ["Sentiment Analyzer", "User Guide"])
+# --- 1. App Configuration ---
+st.set_page_config(page_title="Sentiment Analyser", page_icon="🪄", layout="wide")
 
-if app_mode == "User Guide":
-    render_user_guide()  # We will define this function below
-else:
-# --- 1. Load Model & Vectorizer ---
+# --- 2. Load Model & Assets ---
 current_dir = os.path.dirname(os.path.abspath(__file__))
 model_path = os.path.join(current_dir, 'sentiment_svc_model.pkl')
 tfidf_path = os.path.join(current_dir, 'tfidf_vectorizer.pkl')
 
-@st.cache_resource # This keeps the model in memory so it doesn't reload every time
+@st.cache_resource
 def load_assets():
     model = joblib.load(model_path)
     tfidf = joblib.load(tfidf_path)
@@ -29,251 +26,117 @@ sentiment_map = {
     3: "Anger", 4: "Disgust", 5: "Surprise", 6: "Sarcastic"
 }
 
-# --- 2. App UI Layout ---
-st.set_page_config(page_title="Sentiment Analyser", page_icon="🪄")
-st.title("Kurdish Sentiment Analysis")
-st.write("By Fanar Rofoo")
-# --- Research Methodology Section ---
-with st.expander("📖 About this App"):
-    st.markdown("""
-    ### Methodology & Background
-    This tool is part of a **PhD research project** focused on enhancing **Kurdish Natural Language Processing (NLP)**. 
-    Kurdish is a "low-resource" language in the AI world, meaning there is less digital data available compared to English. 
-    This research aims to bridge that gap.
-
-    **How the Model Works:**
-    1.  **Preprocessing:** Your text is cleaned and converted into numerical data using **TF-IDF Vectorization**.
-    2.  **Classification:** We utilize a **Linear Support Vector Classifier (LinearSVC)**, which is highly effective for text classification tasks.
-    3.  **Accuracy:** During the validation phase, this model achieved an accuracy of **86%** across 7 sentiment categories.
-
-    **The 7 Sentiments Analyzed:**
-    * **0-3:** Sadness, Happiness, Fear, Anger
-    * **4-6:** Disgust, Surprise, Sarcastic
-
-    **Your Role:**
-    By providing feedback on incorrect predictions, you are helping to refine the dataset. This "Human-in-the-loop" approach is vital for capturing the linguistic nuances of Kurdish dialects and sarcasm.
-    """)
-    
-# --- Data Privacy Section ---
-with st.expander("🔐 Data Privacy & Ethics"):
-    st.markdown("""
-    ### Your Privacy Matters
-    In accordance with academic research ethics and data protection principles (like GDPR), we are committed to protecting your privacy.
-    **1. What data is collected?**
-    We only collect the **Kurdish text** you provide and the **sentiment labels** (both AI-predicted and user-corrected). 
-    **2. Is my identity tracked?**
-    **No.** We do not collect names, email addresses, IP addresses, or any other personal identifiers. The data is completely **anonymized**.
-    **3. How is the data used?**
-    The logs are used exclusively for:
-    * Evaluating the performance of the LinearSVC model.
-    * Identifying linguistic patterns for PhD thesis analysis.
-    * Improving the dataset for future Kurdish NLP research.
-    **4. Data Security**
-    Your feedback is stored securely in a private Supabase database and will not be sold or shared with third-party advertisers.
-    **By using the "Submit Feedback" button, you consent to the storage of the entered text for the research purposes mentioned above.**
-    """)
-
 conn = st.connection("supabase", type=SupabaseConnection)
 
-# --- 3. Prediction Logic ---
-user_input = st.text_area("Enter a sentence to analyse:", placeholder="Kurdish text only")
+# --- 3. Sidebar Navigation ---
+st.sidebar.title("📌 Menu")
+app_mode = st.sidebar.radio("Go to:", ["Sentiment Analyzer", "User Guide"])
 
-# Initialize session state variables if they don't exist
-if 'prediction' not in st.session_state:
-    st.session_state.prediction = None
-if 'label' not in st.session_state:
-    st.session_state.label = None
-
-if st.button("Analyze Sentiment"):
-    if user_input.strip() == "":
-        st.warning("Please enter some text first.")
-    else:
-        vec = tfidf.transform([user_input])
-        # Store results in session_state so they persist
-        st.session_state.prediction = model.predict(vec)[0]
-        st.session_state.label = sentiment_map.get(st.session_state.prediction, "Unknown")
-
-# --- 4. Display Result (Only if a prediction has been made) ---
-if st.session_state.prediction is not None:
-    st.divider()
-    st.subheader(f"Predicted Sentiment: **{st.session_state.label}**")
-    st.info(f"Class ID: {st.session_state.prediction}")
-    
-    # Check if a prediction was successfully generated
-    if st.session_state.prediction >= 0: 
-        st.success("✅ Analysis completed successfully!")
-
-    # --- 5. Feedback Section ---
-    st.divider()
-    st.subheader("🛠️ Help Improve the AI")
-    
-    with st.expander("Report an incorrect prediction"):
-        st.markdown("""
-        **ID | Sentiment**
-        0 | Sadness  
-        1 | Happiness  
-        2 | Fear  
-        3 | Anger  
-        4 | Disgust  
-        5 | Surprise  
-        6 | Sarcastic
-        """)
-        
-        correct_label = st.selectbox(
-            "What is the correct sentiment (0-6)?", 
-            options=list(sentiment_map.keys()),
-            format_func=lambda x: f"{x} - {sentiment_map[x]}"
-        )
-
-        # Consent mechanism for PhD Ethics
-        st.info("💡 Your feedback helps improve Kurdish NLP research.")
-        consent_given = st.checkbox("I consent to the anonymized storage of this text for research purposes.")
-
-        # Submit button logic
-        if consent_given:
-            if st.button("Submit Feedback", type="primary"):
-                try:
-                    feedback_data = {
-                        "user_input": user_input,
-                        "model_prediction": int(st.session_state.prediction),
-                        "correct_label": int(correct_label)
-                    }
-                    # Insert into Supabase
-                    conn.table("sentiment_feedback").insert(feedback_data).execute()
-                    st.success("✅ Thank you! Your feedback has been safely logged.")
-                except Exception as e:
-                    st.error(f"Failed to save feedback: {e}")
-        else:
-            st.button("Submit Feedback", help="Please check the consent box first", disabled=True)
-# --- 6. Admin Dashboard (Hidden) ---
-st.divider()
-with st.expander("🔐 Admin Access"):
-    password = st.text_input("Enter Admin Password", type="password")
-    
-    if password == st.secrets["ADMIN_PASSWORD"]:
-        st.success("Access Granted")
-        
-# --- PART A: FETCH & VISUALIZE DATA ---
-        try:
-            response = conn.table("sentiment_feedback").select("*").execute()
-            
-            if response.data:
-                df_admin = pd.DataFrame(response.data)
-                
-                # 1. Calculate Live Accuracy
-                total_feedback = len(df_admin)
-                # Count where prediction matches the user's correct label
-                correct_matches = len(df_admin[df_admin['model_prediction'] == df_admin['correct_label']])
-                live_accuracy = (correct_matches / total_feedback) * 100 if total_feedback > 0 else 0
-                
-                # 2. Display Metrics in Columns
-                st.subheader("📈 Performance Overview")
-                col1, col2, col3 = st.columns(3)
-                col1.metric("Total Feedback", f"{total_feedback}")
-                col2.metric("Live Accuracy", f"{live_accuracy:.1f}%")
-                col3.metric("Training Accuracy", "86.0%") # Your fixed PhD benchmark
-
-                # 3. Process names for charts
-                df_admin['Predicted Name'] = df_admin['model_prediction'].map(sentiment_map)
-                df_admin['Correct Name'] = df_admin['correct_label'].map(sentiment_map)
-
-                # --- VISUALIZATION: Error Distribution ---
-                st.subheader("📊 Error Distribution")
-                chart_data = df_admin['Correct Name'].value_counts().reset_index()
-                chart_data.columns = ['Sentiment', 'Count']
-                st.plotly_chart(px.bar(chart_data, x='Sentiment', y='Count', color='Sentiment', template="plotly_white"), use_container_width=True)
-
-                # --- VISUALIZATION: Confusion Matrix ---
-                st.subheader("🧠 Model Confusion Matrix")
-                st.write("This heatmap shows exactly which labels are being swapped.")
-                
-                # 
-                
-                confusion_matrix = pd.crosstab(
-                    df_admin['Predicted Name'], 
-                    df_admin['Correct Name'],
-                    dropna=False
-                )
-                
-                fig_heat = px.imshow(
-                    confusion_matrix, 
-                    text_auto=True, 
-                    color_continuous_scale='RdBu_r',
-                    labels=dict(x="User Said (Actual)", y="AI Said (Predicted)")
-                )
-                st.plotly_chart(fig_heat, use_container_width=True)
-
-                # --- DATA TABLE & DOWNLOAD ---
-                st.subheader("📋 Raw Feedback Logs")
-                st.dataframe(df_admin, use_container_width=True)
-                
-                csv = df_admin.to_csv(index=False).encode('utf-8')
-                st.download_button("📥 Download Feedback as CSV", data=csv, file_name="kurdish_sentiment_feedback.csv", mime="text/csv")
-            
-            else:
-                st.info("No feedback entries found yet.")
-                
-        except Exception as e:
-            st.error(f"Error fetching data: {e}")
-
-        # --- PART B: DANGER ZONE (Separate from the fetch try/except) ---
-        st.markdown("---")
-        st.subheader("⚠️ Danger Zone")
-        confirm_delete = st.checkbox("I want to permanently delete all feedback records.")
-        
-        if st.button("Delete All Logs", type="primary", disabled=not confirm_delete):
-            try:
-                # We use a filter that is always true to delete all rows
-                conn.table("sentiment_feedback").delete().neq("id", 0).execute()
-                st.success("💥 All records deleted!")
-                st.rerun() 
-            except Exception as e:
-                st.error(f"Deletion failed: {e}")
-            
-    elif password:
-        st.error("Incorrect password")
+# --- 4. User Guide Function ---
 def render_user_guide():
     st.title("📖 User Guide & Instructions")
-    st.write("Thank you for participating in this Kurdish NLP research. Please follow these steps to use the tool effectively.")
+    st.info("Thank you for participating in this Kurdish NLP research. Follow these steps to use the tool effectively.")
     
-    st.divider()
-    
-    # --- Step 1 ---
     st.subheader("1. Entering Text")
-    st.write("""
-    * Type or paste your Kurdish sentence into the text area.
-    * **Note:** The model is optimized for Kurdish. Using other languages may result in inaccurate predictions.
-    * Click the **'Analyze Sentiment'** button.
-    """)
+    st.write("Type or paste your Kurdish sentence into the text area. The model is optimized for Kurdish text only.")
     
-    # --- Step 2 ---
     st.subheader("2. Understanding Results")
-    st.write("""
-    The AI will classify your text into one of seven categories:
-    * **Happiness / Sadness / Fear / Anger**: Standard emotional states.
-    * **Surprise**: For unexpected events.
-    * **Disgust**: For expressing strong dislike.
-    * **Sarcastic**: For sentences where the meaning is the opposite of the words used.
-    """)
+    st.write("The AI classifies text into 7 categories: Sadness, Happiness, Fear, Anger, Disgust, Surprise, and Sarcastic.")
     
-    # --- Step 3 ---
-    st.subheader("3. Providing Feedback (Crucial for Research)")
-    st.write("""
-    If you feel the AI made a mistake:
-    1. Scroll down to **'Report an incorrect prediction'**.
-    2. Select what you believe is the **correct** sentiment from the dropdown.
-    3. Read the **Privacy Notice** and check the **Consent Box**.
-    4. Click **'Submit Feedback'**.
-    """)
+    st.subheader("3. Providing Feedback (PhD Research)")
+    st.write("If the AI is wrong, use the 'Report an incorrect prediction' section. You must check the **Consent Box** before submitting.")
     
-    st.info("💡 Your feedback directly helps retrain the model to better understand Kurdish linguistic nuances.")
-    
-    # --- Step 4 ---
-    st.subheader("4. Technical FAQ")
-    with st.expander("Is my data saved?"):
-        st.write("Only if you click 'Submit Feedback'. Regular analysis is not permanently logged.")
-    
-    with st.expander("Why did it get my sentence wrong?"):
-        st.write("Sentiment analysis is complex, especially in Kurdish due to various dialects. Your corrections help the AI learn these differences!")
+    st.success("Switch back to 'Sentiment Analyzer' in the sidebar to begin!")
 
-    st.success("Ready to start? Switch to 'Sentiment Analyzer' in the sidebar!")
+# --- 5. Main App Logic ---
+if app_mode == "User Guide":
+    render_user_guide()
+
+else:
+    # --- Sentiment Analyzer Page ---
+    st.title("Kurdish Sentiment Analysis")
+    st.write("By Fanar Rofoo")
+    
+    with st.expander("📖 About this Research"):
+        st.write("This PhD research employs a LinearSVC model (86% accuracy) to analyze Kurdish NLP.")
+
+    with st.expander("🔐 Data Privacy & Ethics"):
+        st.write("Data is anonymized. We only log the text and labels you provide for model improvement.")
+
+    user_input = st.text_area("Enter a sentence to analyse:", placeholder="Kurdish text only")
+
+    if 'prediction' not in st.session_state:
+        st.session_state.prediction = None
+    if 'label' not in st.session_state:
+        st.session_state.label = None
+
+    if st.button("Analyze Sentiment"):
+        if user_input.strip() == "":
+            st.warning("Please enter some text first.")
+        else:
+            vec = tfidf.transform([user_input])
+            st.session_state.prediction = model.predict(vec)[0]
+            st.session_state.label = sentiment_map.get(st.session_state.prediction, "Unknown")
+
+    if st.session_state.prediction is not None:
+        st.divider()
+        st.subheader(f"Predicted Sentiment: **{st.session_state.label}**")
+        st.success("✅ Analysis completed successfully!")
+
+        # --- Feedback Section ---
+        st.divider()
+        with st.expander("🛠️ Help Improve the AI (Report Incorrect Prediction)"):
+            correct_label = st.selectbox(
+                "What is the correct sentiment?", 
+                options=list(sentiment_map.keys()),
+                format_func=lambda x: f"{x} - {sentiment_map[x]}"
+            )
+            consent_given = st.checkbox("I consent to the anonymized storage of this text.")
+            
+            if consent_given:
+                if st.button("Submit Feedback", type="primary"):
+                    try:
+                        feedback_data = {
+                            "user_input": user_input,
+                            "model_prediction": int(st.session_state.prediction),
+                            "correct_label": int(correct_label)
+                        }
+                        conn.table("sentiment_feedback").insert(feedback_data).execute()
+                        st.success("✅ Thank you! Feedback logged.")
+                    except Exception as e:
+                        st.error(f"Error: {e}")
+            else:
+                st.button("Submit Feedback", disabled=True, help="Check consent box first")
+
+    # --- 6. Admin Dashboard ---
+    st.divider()
+    with st.expander("🔐 Admin Access"):
+        password = st.text_input("Enter Admin Password", type="password")
+        if password == st.secrets["ADMIN_PASSWORD"]:
+            try:
+                response = conn.table("sentiment_feedback").select("*").execute()
+                if response.data:
+                    df_admin = pd.DataFrame(response.data)
+                    
+                    # Performance Metrics
+                    total_feedback = len(df_admin)
+                    correct_matches = len(df_admin[df_admin['model_prediction'] == df_admin['correct_label']])
+                    live_acc = (correct_matches / total_feedback) * 100 if total_feedback > 0 else 0
+                    
+                    st.subheader("📈 Performance Overview")
+                    c1, c2 = st.columns(2)
+                    c1.metric("Total Feedback", total_feedback)
+                    c2.metric("Live Accuracy", f"{live_acc:.1f}%")
+
+                    # Confusion Matrix
+                    st.subheader("🧠 Model Confusion Matrix")
+                    df_admin['Predicted'] = df_admin['model_prediction'].map(sentiment_map)
+                    df_admin['Actual'] = df_admin['correct_label'].map(sentiment_map)
+                    conf_matrix = pd.crosstab(df_admin['Predicted'], df_admin['Actual'])
+                    st.plotly_chart(px.imshow(conf_matrix, text_auto=True), use_container_width=True)
+                    
+                    st.dataframe(df_admin)
+                else:
+                    st.info("No data yet.")
+            except Exception as e:
+                st.error(f"Fetch error: {e}")
