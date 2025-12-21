@@ -138,7 +138,24 @@ with st.expander("🔐 Admin Access"):
                 )
             else:
                 st.info("No feedback entries found yet.")
-                
+        # --- 7. Danger Zone: Delete Logs ---
+st.markdown("---")
+st.subheader("⚠️ Danger Zone")
+st.write("Use this to clear the database once you've finished testing.")
+
+# Double-confirmation mechanism
+confirm_delete = st.checkbox("I want to permanently delete all feedback records.")
+if st.button("Delete All Logs", type="primary", disabled=not confirm_delete):
+    try:
+        # In Supabase, you must provide a filter to delete. 
+        # Using .neq("id", 0) effectively selects all rows.
+        conn.table("sentiment_feedback").delete().neq("id", 0).execute()
+        
+        st.success("💥 All records have been deleted. Please refresh the page.")
+        # Optional: Clear the session state to update the UI
+        st.rerun() 
+    except Exception as e:
+        st.error(f"Failed to delete records: {e}")
         except Exception as e:
             # This 'except' block fixes the SyntaxError!
             st.error(f"Error fetching data: {e}")
