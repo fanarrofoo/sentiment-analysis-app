@@ -80,9 +80,9 @@ else:
     st.title("Kurdish Sentiment Analysis")
     st.write("By Fanar Rofoo | PhD Research Project")
     
-    with st.expander("📖 About this Research"):
+    with st.expander("📖 About this App"):
         st.markdown("""
-        This research uses a **Linear Support Vector Classifier (LinearSVC)**. 
+        This app is a part of a PhD, in which a **Linear Support Vector Classifier (LinearSVC)** is used after testing many other classifiers. 
         Kurdish is a low-resource language, and this project aims to improve AI understanding of its dialects and sentiments.
         """)
 
