@@ -142,7 +142,9 @@ with st.expander("🔐 Admin Access"):
         except Exception as e:
             # This 'except' block fixes the SyntaxError!
             st.error(f"Error fetching data: {e}")
-# --- 7. Danger Zone: Delete Logs ---
+    elif password:
+        st.error("Incorrect password")
+    # --- 7. Danger Zone: Delete Logs ---
 st.markdown("---")
 st.subheader("⚠️ Danger Zone")
 st.write("Use this to clear the database once you've finished testing.")
@@ -161,5 +163,3 @@ if st.button("Delete All Logs", type="primary", disabled=not confirm_delete):
     except Exception as e:
         st.error(f"Failed to delete records: {e}")
         
-    elif password:
-        st.error("Incorrect password")
