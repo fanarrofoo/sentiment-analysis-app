@@ -93,7 +93,8 @@ if st.session_state.prediction is not None:
     st.subheader(f"Predicted Sentiment: **{st.session_state.label}**")
     st.info(f"Class ID: {st.session_state.prediction}")
     
-   if st.session_state.prediction >= 0: 
+    # Check if a prediction was successfully generated
+    if st.session_state.prediction >= 0: 
         st.success("✅ Analysis completed successfully!")
 
     # --- 5. Feedback Section ---
