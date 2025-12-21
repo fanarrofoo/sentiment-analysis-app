@@ -55,7 +55,7 @@ if st.session_state.prediction is not None:
         st.balloons()
 
     # --- 5. Feedback Section ---
-   if st.session_state.prediction is not None:
+if st.session_state.prediction is not None:
     st.divider()
     st.subheader("🛠️ Help Improve the AI")
     
