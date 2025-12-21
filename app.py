@@ -42,7 +42,7 @@ with st.expander("📖 About this Research"):
 
     **The 7 Sentiments Analyzed:**
     * **0-3:** Sadness, Happiness, Fear, Anger
-    * **4-6:** Disgust, Surprise, Sarcastic (The 'Positive/Neutral' indicators)
+    * **4-6:** Disgust, Surprise, Sarcastic
 
     **Your Role:**
     By providing feedback on incorrect predictions, you are helping to refine the dataset. This "Human-in-the-loop" approach is vital for capturing the linguistic nuances of Kurdish dialects and sarcasm.
