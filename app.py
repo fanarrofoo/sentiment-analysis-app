@@ -83,3 +83,40 @@ if st.session_state.prediction is not None:
                 st.success("✅ Thank you! Your feedback has been sent to the developer.")
             except Exception as e:
                 st.error(f"Failed to save feedback: {e}")
+# --- 6. Admin Dashboard (Hidden) ---
+st.divider()
+with st.expander("🔐 Admin Access"):
+    password = st.text_input("Enter Admin Password", type="password")
+    
+    if password == st.secrets["ADMIN_PASSWORD"]:
+        st.success("Access Granted")
+        st.subheader("Recent Feedback Data")
+        
+        try:
+            # Fetch data from Supabase
+            response = conn.table("sentiment_feedback").select("*").execute()
+            
+            if response.data:
+                df_admin = pd.DataFrame(response.data)
+                
+                # Make the dataframe look nicer
+                st.dataframe(df_admin, use_container_width=True)
+                
+                # Add a download button for your PhD research CSV
+                csv = df_admin.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="📥 Download Feedback as CSV",
+                    data=csv,
+                    file_name="kurdish_sentiment_feedback.csv",
+                    mime="text/csv",
+                )
+                
+                # Summary Statistics
+                st.write(f"**Total Feedback Entries:** {len(df_admin)}")
+            else:
+                st.info("No feedback entries found yet.")
+                
+        except Exception as e:
+            st.error(f"Error fetching data: {e}")
+    elif password:
+        st.error("Incorrect password")
