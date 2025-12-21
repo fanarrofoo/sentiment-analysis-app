@@ -104,7 +104,7 @@ supabase = init_connection()
 
 # 3. Test the connection (Example: Fetching from a table named 'mytable')
 try:
-    response = supabase.table("mytable").select("*").execute()
+    response = supabase.table("feedback").select("*").execute()
     st.success("Successfully connected to Supabase!")
     st.write(response.data)
 except Exception as e:
