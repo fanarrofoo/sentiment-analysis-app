@@ -136,15 +136,7 @@ with st.expander("🔐 Admin Access"):
                     file_name="kurdish_sentiment_feedback.csv",
                     mime="text/csv",
                 )
-            else:
-                st.info("No feedback entries found yet.")
-        
-        except Exception as e:
-            # This 'except' block fixes the SyntaxError!
-            st.error(f"Error fetching data: {e}")
-    elif password:
-        st.error("Incorrect password")
-    # --- 7. Danger Zone: Delete Logs ---
+                    # --- 7. Danger Zone: Delete Logs ---
 st.markdown("---")
 st.subheader("⚠️ Danger Zone")
 st.write("Use this to clear the database once you've finished testing.")
@@ -163,3 +155,12 @@ if st.button("Delete All Logs", type="primary", disabled=not confirm_delete):
     except Exception as e:
         st.error(f"Failed to delete records: {e}")
         
+# end of danger zone
+            else:
+                st.info("No feedback entries found yet.")
+        
+        except Exception as e:
+            # This 'except' block fixes the SyntaxError!
+            st.error(f"Error fetching data: {e}")
+    elif password:
+        st.error("Incorrect password")
