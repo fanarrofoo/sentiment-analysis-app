@@ -92,31 +92,66 @@ with st.expander("🔐 Admin Access"):
     if password == st.secrets["ADMIN_PASSWORD"]:
         st.success("Access Granted")
         
-        # --- PART A: FETCH & VISUALIZE DATA ---
+# --- PART A: FETCH & VISUALIZE DATA ---
         try:
             response = conn.table("sentiment_feedback").select("*").execute()
             
             if response.data:
                 df_admin = pd.DataFrame(response.data)
+                
+                # 1. Calculate Live Accuracy
+                total_feedback = len(df_admin)
+                # Count where prediction matches the user's correct label
+                correct_matches = len(df_admin[df_admin['model_prediction'] == df_admin['correct_label']])
+                live_accuracy = (correct_matches / total_feedback) * 100 if total_feedback > 0 else 0
+                
+                # 2. Display Metrics in Columns
+                st.subheader("📈 Performance Overview")
+                col1, col2, col3 = st.columns(3)
+                col1.metric("Total Feedback", f"{total_feedback}")
+                col2.metric("Live Accuracy", f"{live_accuracy:.1f}%")
+                col3.metric("Training Accuracy", "86.0%") # Your fixed PhD benchmark
+
+                # 3. Process names for charts
                 df_admin['Predicted Name'] = df_admin['model_prediction'].map(sentiment_map)
                 df_admin['Correct Name'] = df_admin['correct_label'].map(sentiment_map)
 
+                # --- VISUALIZATION: Error Distribution ---
                 st.subheader("📊 Error Distribution")
                 chart_data = df_admin['Correct Name'].value_counts().reset_index()
                 chart_data.columns = ['Sentiment', 'Count']
-                st.plotly_chart(px.bar(chart_data, x='Sentiment', y='Count', color='Sentiment'), use_container_width=True)
+                st.plotly_chart(px.bar(chart_data, x='Sentiment', y='Count', color='Sentiment', template="plotly_white"), use_container_width=True)
 
+                # --- VISUALIZATION: Confusion Matrix ---
                 st.subheader("🧠 Model Confusion Matrix")
-                confusion_matrix = pd.crosstab(df_admin['Predicted Name'], df_admin['Correct Name'])
-                st.plotly_chart(px.imshow(confusion_matrix, text_auto=True, color_continuous_scale='RdBu_r'), use_container_width=True)
+                st.write("This heatmap shows exactly which labels are being swapped.")
+                
+                # 
+                
+                confusion_matrix = pd.crosstab(
+                    df_admin['Predicted Name'], 
+                    df_admin['Correct Name'],
+                    dropna=False
+                )
+                
+                fig_heat = px.imshow(
+                    confusion_matrix, 
+                    text_auto=True, 
+                    color_continuous_scale='RdBu_r',
+                    labels=dict(x="User Said (Actual)", y="AI Said (Predicted)")
+                )
+                st.plotly_chart(fig_heat, use_container_width=True)
 
+                # --- DATA TABLE & DOWNLOAD ---
                 st.subheader("📋 Raw Feedback Logs")
                 st.dataframe(df_admin, use_container_width=True)
                 
                 csv = df_admin.to_csv(index=False).encode('utf-8')
                 st.download_button("📥 Download Feedback as CSV", data=csv, file_name="kurdish_sentiment_feedback.csv", mime="text/csv")
+            
             else:
                 st.info("No feedback entries found yet.")
+                
         except Exception as e:
             st.error(f"Error fetching data: {e}")
 
