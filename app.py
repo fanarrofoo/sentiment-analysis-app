@@ -88,13 +88,10 @@ if st.session_state.prediction is not None:
             df_feedback.to_csv("feedback_log.csv", mode='a', header=not os.path.exists("feedback_log.csv"), index=False)
             st.success("✅ Thank you! Your feedback has been logged.")
 """
-
-if st.session_state.prediction is not None:
     st.divider()
     st.subheader("🛠️ Help Improve the AI")
-    with st.expander("Report an incorrect prediction"):
-        # (Keep your selectbox logic here...)
-        st.markdown("""
+     with st.expander("Report an incorrect prediction"):
+         st.markdown("""
         **ID | Sentiment** 0 | Sadness  
         1 | Happiness  
         2 | Fear  
@@ -114,7 +111,8 @@ if st.session_state.prediction is not None:
             options=list(sentiment_map.keys()),
             format_func=lambda x: f"{x} - {sentiment_map[x]}"
         )
-        
+if st.session_state.prediction is not None:
+        # (Keep your selectbox logic here...)
         if st.button("Submit Feedback"):
             # Prepare data for Supabase
             feedback_data = {
