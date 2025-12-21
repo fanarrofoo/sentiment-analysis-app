@@ -99,7 +99,40 @@ with st.expander("🔐 Admin Access"):
             
             if response.data:
                 df_admin = pd.DataFrame(response.data)
-                
+                # --- Charting Logic ---
+    st.subheader("📊 Error Distribution")
+    st.write("Which sentiments are users reporting as the 'Correct' label?")
+
+    # Map the IDs to Names for the chart
+    df_admin['Label Name'] = df_admin['correct_label'].map(sentiment_map)
+    
+    # Create a frequency count
+    chart_data = df_admin['Label Name'].value_counts().reset_index()
+    chart_data.columns = ['Sentiment', 'Count']
+
+    # Create the Plotly Bar Chart
+    fig = px.bar(
+        chart_data, 
+        x='Sentiment', 
+        y='Count',
+        color='Sentiment',
+        labels={'Count': 'Number of Reports', 'Sentiment': 'Correct Category'},
+        template="plotly_white"
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+
+    # --- Data Table & Download ---
+    st.subheader("📋 Raw Feedback Logs")
+    st.dataframe(df_admin, use_container_width=True)
+    
+    csv = df_admin.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label="📥 Download Feedback as CSV",
+        data=csv,
+        file_name="kurdish_sentiment_feedback.csv",
+        mime="text/csv",
+    )
                 # Make the dataframe look nicer
                 st.dataframe(df_admin, use_container_width=True)
                 
