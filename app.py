@@ -120,7 +120,7 @@ else:
         st.write("By providing feedback, you consent to the storage of anonymized text for academic purposes.")
 
     # Input Area
-    user_input = st.text_area("Enter a Kurdish sentence:", placeholder="e.g., Ez pir kêfxweş im", height=150)
+    user_input = st.text_area("Enter a Kurdish sentence:", placeholder="Kurdish text only, preferred Kurdish unicode", height=150)
 
     if st.button("Analyze Sentiment", type="primary"):
         if user_input.strip() == "":
