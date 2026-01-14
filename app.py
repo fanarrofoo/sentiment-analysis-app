@@ -108,8 +108,7 @@ if app_mode == "User Guide":
 else:
     # --- Sentiment Analyzer Page ---
     st.title("Kurdish Sentiment Analysis")
-    st.write("By Fanar Rofoo | PhD Research Project"
-            "Supervised by: Prof. Dr. Shareef M. Shareef, Dr. Polla Fattah")
+    st.write("By Fanar Rofoo | PhD Research Project \nSupervised by: Prof. Dr. Shareef M. Shareef, Dr. Polla Fattah")
     st.write()
     with st.expander("📖 About this App"):
         st.markdown("""
