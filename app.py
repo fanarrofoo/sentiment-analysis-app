@@ -108,8 +108,8 @@ if app_mode == "User Guide":
 else:
     # --- Sentiment Analyzer Page ---
     st.title("Kurdish Sentiment Analysis")
-    st.write("By Fanar Rofoo | PhD Research Project \n\nSupervised by: Prof. Dr. Shareef M. Shareef, Dr. Polla Fattah")
-    st.write()
+    st.write("By Fanar Rofoo|PhD Research Project. Supervised by: Prof. Dr. Shareef M. Shareef, Dr. Polla Fattah")
+    st.write(" ")
     with st.expander("📖 About this App"):
         st.markdown("""
         This app is a part of a PhD, in which a **Linear Support Vector Classifier (LinearSVC)** is used after testing many other classifiers. 
