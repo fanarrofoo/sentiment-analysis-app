@@ -1,11 +1,13 @@
 import streamlit as st
 import joblib
+import os
 import pandas as pd
 import numpy as np
 import logging
 from typing import Tuple, Optional, Dict, Any
 from pathlib import Path
 import plotly.express as px
+from sqlalchemy import text
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -25,19 +27,20 @@ COLOR_MAP: Dict[int, str] = {
 }
 
 MAX_TEXT_LENGTH = 5000
+MIN_TEXT_LENGTH = 1
 
 # --- 1. App Configuration ---
 st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="wide")
 
-# --- 2. Database Connection (The Modern Way) ---
+# --- 2. Database Connection ---
 def get_db_connection():
+    """Uses Streamlit's native SQL connection logic."""
     try:
-        # This will attempt to connect and cache the connection
-        conn = st.connection("sqlserver", type="sql")
+        # This looks for [connections.sqlserver] in your Secrets
+        conn = st.connection("sqlserver", type="sql", autocommit=True)
         return conn
     except Exception as e:
-        # This will show you the EXACT error on the app interface
-        st.sidebar.error(f"DB Error: {str(e)}")
+        logger.error(f"SQL Connection Error: {str(e)}")
         return None
 
 # --- 3. Utility Functions ---
@@ -46,126 +49,153 @@ def initialize_session_state():
         'prediction': None, 'label': None, 'confidence': 0.0,
         'current_color': "#f0f2f6", 'user_input': "", 'probabilities': None
     }
-    for key, val in defaults.items():
+    for key, value in defaults.items():
         if key not in st.session_state:
-            st.session_state[key] = val
+            st.session_state[key] = value
 
 @st.cache_resource
 def load_assets():
-    curr_dir = Path(__file__).parent
-    try:
-        model = joblib.load(curr_dir / 'sentiment_svc_model.pkl')
-        tfidf = joblib.load(curr_dir / 'tfidf_vectorizer.pkl')
-        return model, tfidf
-    except Exception as e:
-        st.error(f"Model files missing or corrupt: {e}")
-        st.stop()
+    current_dir = Path(__file__).parent
+    model = joblib.load(current_dir / 'sentiment_svc_model.pkl')
+    tfidf = joblib.load(current_dir / 'tfidf_vectorizer.pkl')
+    return model, tfidf
 
 def calculate_confidence_scores(decision_scores, prediction):
     exp_scores = np.exp(decision_scores - np.max(decision_scores))
-    probs = exp_scores / exp_scores.sum()
-    return float(probs[prediction] * 100), probs
+    probabilities = exp_scores / exp_scores.sum()
+    return float(probabilities[prediction] * 100), probabilities
 
-def calculate_metrics(df):
+def calculate_classification_metrics(df):
     if df.empty: return None
     from sklearn.metrics import precision_recall_fscore_support, confusion_matrix
     y_true, y_pred = df['correct_label'], df['model_prediction']
-    acc = (y_true == y_pred).mean() * 100
-    p, r, f, _ = precision_recall_fscore_support(y_true, y_pred, labels=list(SENTIMENT_MAP.keys()), average=None, zero_division=0)
+    
+    accuracy = (y_true == y_pred).mean() * 100
+    precision, recall, f1, _ = precision_recall_fscore_support(
+        y_true, y_pred, labels=list(SENTIMENT_MAP.keys()), average=None, zero_division=0
+    )
+    
+    metrics_df = pd.DataFrame({
+        'Sentiment': [SENTIMENT_MAP[i] for i in SENTIMENT_MAP.keys()],
+        'Precision (%)': precision * 100,
+        'Recall (%)': recall * 100,
+        'F1-Score (%)': f1 * 100
+    })
     
     return {
-        'total': len(df), 'accuracy': acc,
-        'metrics_df': pd.DataFrame({
-            'Sentiment': [SENTIMENT_MAP[i] for i in SENTIMENT_MAP.keys()],
-            'Precision (%)': p * 100, 'Recall (%)': r * 100, 'F1-Score (%)': f * 100
-        }),
+        'total': len(df), 'accuracy': accuracy, 'metrics_df': metrics_df,
         'cm': confusion_matrix(y_true, y_pred, labels=list(SENTIMENT_MAP.keys()))
     }
 
 # --- 4. UI Components ---
-def render_sentiment_card(label, color):
+def render_sentiment_card(label: str, color: str):
     st.markdown(f"""
         <div style="background-color: #f8f9fb; padding: 30px; border-radius: 15px; 
-        border-left: 15px solid {color}; text-align: center; box-shadow: 2px 2px 10px rgba(0,0,0,0.05);">
-            <p style="color: #555; font-weight: bold;">AI Prediction:</p>
-            <h1 style="color: {color}; font-size: 60px;">{label}</h1>
+            border-left: 15px solid {color}; text-align: center; box-shadow: 2px 2px 10px rgba(0,0,0,0.05); margin-bottom: 10px;">
+            <p style="color: #555; font-size: 18px; margin-bottom: 5px; font-weight: bold;">The AI detected:</p>
+            <h1 style="color: {color}; margin: 0; font-size: 65px; text-transform: uppercase;">{label}</h1>
         </div>
     """, unsafe_allow_html=True)
 
-# --- 5. Main Logic ---
+# --- 5. Application Initiation ---
 initialize_session_state()
 model, tfidf = load_assets()
 db = get_db_connection()
 
-st.sidebar.title("📌 Navigation")
-app_mode = st.sidebar.radio("Go to:", ["Analyzer", "Admin Dashboard"])
+# --- 6. Sidebar ---
+st.sidebar.title("📌 Menu")
+app_mode = st.sidebar.radio("Go to:", ["Sentiment Analyzer", "User Guide", "Admin Dashboard"])
 
-if app_mode == "Analyzer":
+# --- 7. Main Logic ---
+if app_mode == "User Guide":
+    st.title("📖 User Guide & Instructions")
+    st.write("Thank you for participating in this Kurdish NLP research.")
+    st.subheader("1. Entering Text")
+    st.info("The model is optimized for Kurdish Unicode. Using other languages may result in inaccurate predictions.")
+    st.subheader("2. Providing Feedback")
+    st.write("If the AI is wrong, use the 'Report' section. This helps retrain the model for better Kurdish dialect support.")
+
+elif app_mode == "Sentiment Analyzer":
     st.title("Kurdish Sentiment Analysis")
-    st.caption("PhD Research Project by Fanar Rofoo")
-
-    user_input = st.text_area("Enter Kurdish text:", height=150, max_chars=MAX_TEXT_LENGTH)
+    st.write("By Fanar Rofoo | PhD Research Project")
     
-    if st.button("Analyze Sentiment", type="primary"):
+    with st.expander("📖 About this App"):
+        st.markdown("This app uses a **Linear Support Vector Classifier (LinearSVC)**. Kurdish is a low-resource language, and your feedback helps bridge the AI gap.")
+
+    with st.expander("🔐 Data Privacy"):
+        st.write("By providing feedback, you consent to the storage of anonymized text for academic purposes.")
+
+    user_input = st.text_area("Enter a Kurdish sentence:", height=150, max_chars=MAX_TEXT_LENGTH)
+
+    if st.button("Analyze Sentiment", type="primary", use_container_width=True):
         if not user_input.strip():
-            st.warning("Please enter some text.")
+            st.warning("⚠️ Please enter some text first.")
         else:
-            vec = tfidf.transform([user_input])
-            pred_id = int(model.predict(vec)[0])
-            dec_scores = model.decision_function(vec)[0]
-            conf, probs = calculate_confidence_scores(dec_scores, pred_id)
-            
-            st.session_state.update({
-                'prediction': pred_id, 'label': SENTIMENT_MAP[pred_id],
-                'confidence': conf, 'current_color': COLOR_MAP[pred_id],
-                'user_input': user_input, 'probabilities': probs
-            })
-            st.rerun()
+            with st.spinner("🔍 Analyzing..."):
+                vec = tfidf.transform([user_input])
+                pred_id = int(model.predict(vec)[0])
+                conf, probs = calculate_confidence_scores(model.decision_function(vec)[0], pred_id)
+                
+                st.session_state.update({
+                    'prediction': pred_id, 'label': SENTIMENT_MAP[pred_id],
+                    'confidence': conf, 'current_color': COLOR_MAP[pred_id],
+                    'user_input': user_input, 'probabilities': probs
+                })
+                st.rerun()
 
     if st.session_state.prediction is not None:
         st.divider()
         render_sentiment_card(st.session_state.label, st.session_state.current_color)
-        st.write(f"**Confidence:** {st.session_state.confidence:.1f}%")
+        st.write(f"**Model Confidence:** {st.session_state.confidence:.1f}%")
         st.progress(st.session_state.confidence / 100)
 
-        with st.expander("🛠️ Report Correction"):
-            correct_label = st.selectbox("Correct Sentiment?", options=list(SENTIMENT_MAP.keys()), 
-                                         format_func=lambda x: SENTIMENT_MAP[x])
-            if st.button("Submit Feedback"):
+        with st.expander("🛠️ Report an incorrect prediction"):
+            correct_label = st.selectbox("What is the correct sentiment?", options=list(SENTIMENT_MAP.keys()), format_func=lambda x: f"{x} - {SENTIMENT_MAP[x]}")
+            consent = st.checkbox("I consent to the anonymized storage of this text.")
+            
+            if st.button("Submit Feedback", disabled=not consent):
                 if db:
-                    # Use the connection to execute an insert
-                    with db.session as session:
-                        from sqlalchemy import text
-                        query = text("INSERT INTO MyData (user_input, model_prediction, correct_label) VALUES (:ui, :mp, :cl)")
-                        session.execute(query, {"ui": st.session_state.user_input, "mp": st.session_state.prediction, "cl": correct_label})
-                        session.commit()
-                    st.success("Feedback saved to TestDB!")
+                    try:
+                        with db.session as s:
+                            s.execute(
+                                text("INSERT INTO MyData (user_input, model_prediction, correct_label) VALUES (:ui, :mp, :cl)"),
+                                {"ui": st.session_state.user_input, "mp": st.session_state.prediction, "cl": correct_label}
+                            )
+                            s.commit()
+                        st.success("✅ Thank you! Feedback logged.")
+                    except Exception as e:
+                        st.error(f"❌ Database error: {str(e)}")
                 else:
-                    st.error("Database connection missing.")
+                    st.error("❌ Database connection unavailable.")
 
 elif app_mode == "Admin Dashboard":
-    st.title("📈 Model Performance")
+    st.title("🔐 Admin Dashboard")
     pwd = st.text_input("Admin Password", type="password")
     
-    if pwd == st.secrets.get("ADMIN_PASSWORD"):
+    if pwd and pwd == st.secrets.get("ADMIN_PASSWORD"):
         if db:
-            # Query the database
-            df = db.query("SELECT * FROM MyData")
-            m = calculate_metrics(df)
-            
-            if m:
-                c1, c2 = st.columns(2)
-                c1.metric("Total Samples", m['total'])
-                c2.metric("Accuracy", f"{m['accuracy']:.2f}%")
-                
-                st.subheader("Class Breakdown")
-                st.dataframe(m['metrics_df'], hide_index=True)
-                
-                fig = px.imshow(m['cm'], text_auto=True, 
-                                x=list(SENTIMENT_MAP.values()), y=list(SENTIMENT_MAP.values()),
-                                labels=dict(x="Actual", y="Predicted"), title="Confusion Matrix")
-                st.plotly_chart(fig)
-            else:
-                st.info("No data in database yet.")
+            try:
+                df = db.query("SELECT * FROM MyData")
+                metrics = calculate_classification_metrics(df)
+                if metrics:
+                    c1, c2 = st.columns(2)
+                    c1.metric("Total Submissions", metrics['total'])
+                    c2.metric("Accuracy", f"{metrics['accuracy']:.2f}%")
+                    
+                    st.subheader("📊 Performance Table")
+                    st.dataframe(metrics['metrics_df'], use_container_width=True, hide_index=True)
+                    
+                    fig = px.imshow(metrics['cm'], text_auto=True, 
+                                    x=list(SENTIMENT_MAP.values()), y=list(SENTIMENT_MAP.values()),
+                                    labels=dict(x="Actual", y="Predicted"), title="Confusion Matrix")
+                    st.plotly_chart(fig)
+                    st.subheader("📋 Raw Data")
+                    st.dataframe(df, use_container_width=True)
+                else:
+                    st.info("No feedback data available yet.")
+            except Exception as e:
+                st.error(f"Error fetching data: {e}")
         else:
-            st.error("Database not connected.")
+            st.error("Database connection missing.")
+    elif pwd:
+        st.error("❌ Incorrect password.")
