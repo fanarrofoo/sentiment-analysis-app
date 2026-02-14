@@ -34,15 +34,15 @@ st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="wide")
 
 # --- 2. Database Connection ---
 def get_db_connection():
-    """Uses Streamlit's native SQL connection logic."""
     try:
-        # This looks for [connections.sqlserver] in your Secrets
-        conn = st.connection("sqlserver", type="sql", autocommit=True)
+        # We use a short TTL to ensure we don't cache a broken connection
+        conn = st.connection("sqlserver", type="sql", ttl=0)
         return conn
     except Exception as e:
-        logger.error(f"SQL Connection Error: {str(e)}")
+        # This will print the specific error to your sidebar for debugging
+        st.sidebar.warning("📡 Database Connection Issue")
+        logger.error(f"Detailed Connection Error: {e}")
         return None
-
 # --- 3. Utility Functions ---
 def initialize_session_state():
     defaults = {
@@ -170,32 +170,29 @@ elif app_mode == "Sentiment Analyzer":
 
 elif app_mode == "Admin Dashboard":
     st.title("🔐 Admin Dashboard")
-    pwd = st.text_input("Admin Password", type="password")
     
-    if pwd and pwd == st.secrets.get("ADMIN_PASSWORD"):
+    if "admin_logged_in" not in st.session_state:
+        st.session_state.admin_logged_in = False
+
+    if not st.session_state.admin_logged_in:
+        pwd = st.text_input("Admin Password", type="password")
+        if st.button("Login"):
+            if pwd == st.secrets.get("ADMIN_PASSWORD"):
+                st.session_state.admin_logged_in = True
+                st.rerun()
+            else:
+                st.error("❌ Incorrect password.")
+    else:
+        if st.button("Logout"):
+            st.session_state.admin_logged_in = False
+            st.rerun()
+            
         if db:
             try:
-                df = db.query("SELECT * FROM MyData")
-                metrics = calculate_classification_metrics(df)
-                if metrics:
-                    c1, c2 = st.columns(2)
-                    c1.metric("Total Submissions", metrics['total'])
-                    c2.metric("Accuracy", f"{metrics['accuracy']:.2f}%")
-                    
-                    st.subheader("📊 Performance Table")
-                    st.dataframe(metrics['metrics_df'], use_container_width=True, hide_index=True)
-                    
-                    fig = px.imshow(metrics['cm'], text_auto=True, 
-                                    x=list(SENTIMENT_MAP.values()), y=list(SENTIMENT_MAP.values()),
-                                    labels=dict(x="Actual", y="Predicted"), title="Confusion Matrix")
-                    st.plotly_chart(fig)
-                    st.subheader("📋 Raw Data")
-                    st.dataframe(df, use_container_width=True)
-                else:
-                    st.info("No feedback data available yet.")
+                # Use st.connection's query method
+                df = db.query("SELECT * FROM MyData", ttl=0)
+                # ... rest of your metrics code ...
             except Exception as e:
-                st.error(f"Error fetching data: {e}")
+                st.error(f"Connection established but query failed: {e}")
         else:
-            st.error("Database connection missing.")
-    elif pwd:
-        st.error("❌ Incorrect password.")
+            st.error("Database connection could not be established. Please check server firewall settings.")
