@@ -1,8 +1,8 @@
 streamlit
-joblib
 pandas
 numpy
-pyodbc
-plotly
+joblib
 scikit-learn
+plotly
+pyodbc
 sqlalchemy
