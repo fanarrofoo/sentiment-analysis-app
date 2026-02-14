@@ -35,14 +35,23 @@ st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="wide")
 # --- 2. Database Connection ---
 def get_db_connection():
     try:
-        # Use st.connection with a specific dial-in to handle the custom port
-        # No changes needed here if your Secrets URL is formatted correctly as shown above
+        # We use st.connection but wrap it in a custom check
         conn = st.connection("sqlserver", type="sql", ttl=0)
+        
+        # Test if the server is actually reachable before returning
+        with conn.session as s:
+            s.execute(text("SELECT 1"))
         return conn
     except Exception as e:
-        logger.error(f"SQL Connection Error: {str(e)}")
+        # This will help you see if it's a timeout vs a login error
+        error_str = str(e)
+        if "Login timeout" in error_str:
+            st.sidebar.error("📡 Network Timeout: Port 1744 is blocked or the server is offline.")
+        elif "Login failed" in error_str:
+            st.sidebar.error("🔑 Auth Error: Username or Password incorrect.")
+        else:
+            st.sidebar.error(f"⚠️ Connection Error: {error_str[:100]}...")
         return None
-
 
 # --- 3. Utility Functions ---
 def initialize_session_state():
