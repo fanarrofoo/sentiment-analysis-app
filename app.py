@@ -16,7 +16,7 @@ import numpy as np
 import logging
 from typing import Tuple, Optional, Dict, Any
 from pathlib import Path
-from st_supabase_connection import SupabaseConnection
+import pyodbc
 import plotly.express as px
 from plotly.graph_objects import Figure
 
@@ -320,15 +320,34 @@ except (FileNotFoundError, Exception) as e:
     st.error("Please ensure the model files (sentiment_svc_model.pkl and tfidf_vectorizer.pkl) are in the same directory as this application.")
     st.stop()
 
-# Initialize Supabase connection with error handling
-try:
-    conn = st.connection("supabase", type=SupabaseConnection)
-    db_connected = True
-except Exception as e:
-    logger.warning(f"Supabase connection failed: {str(e)}")
+# SQL Server connection settings (server: 140.82.39.222, database: TestDB, table: MyData)
+# Table MyData should have columns: user_input (nvarchar), model_prediction (int), correct_label (int)
+SQL_SERVER = "140.82.39.222"
+SQL_DATABASE = "TestDB"
+SQL_TABLE = "MyData"
+
+def get_sql_connection():
+    """Create a connection to SQL Server using credentials from Streamlit secrets."""
+    try:
+        creds = st.secrets.get("sqlserver", {})
+        conn_str = (
+            f"Driver={{ODBC Driver 17 for SQL Server}};"
+            f"Server={creds.get('server', SQL_SERVER)};"
+            f"Database={creds.get('database', SQL_DATABASE)};"
+            f"UID={creds.get('username', '')};"
+            f"PWD={creds.get('password', '')};"
+            "TrustServerCertificate=yes;"
+        )
+        return pyodbc.connect(conn_str)
+    except Exception as e:
+        logger.warning(f"SQL Server connection failed: {str(e)}")
+        return None
+
+# Initialize SQL Server connection
+_conn = get_sql_connection()
+db_connected = _conn is not None
+if not db_connected:
     st.warning("⚠️ Database connection unavailable. Feedback features will be disabled.")
-    conn = None
-    db_connected = False
 
 # --- 5. Sidebar Navigation ---
 st.sidebar.title("📌 Menu")
@@ -431,12 +450,12 @@ else:
                         st.error("⚠️ Cannot submit feedback: Database connection unavailable.")
                     else:
                         try:
-                            feedback_data = {
-                                "user_input": st.session_state.user_input,
-                                "model_prediction": int(st.session_state.prediction),
-                                "correct_label": int(correct_label)
-                            }
-                            conn.table("sentiment_feedback").insert(feedback_data).execute()
+                            cursor = _conn.cursor()
+                            cursor.execute(
+                                f"INSERT INTO {SQL_TABLE} (user_input, model_prediction, correct_label) VALUES (?, ?, ?)",
+                                (st.session_state.user_input, int(st.session_state.prediction), int(correct_label))
+                            )
+                            _conn.commit()
                             st.success("✅ Thank you! Your feedback has been logged.")
                             logger.info(f"Feedback submitted: prediction={st.session_state.prediction}, correct={correct_label}")
                         except Exception as e:
@@ -460,10 +479,13 @@ else:
                     else:
                         try:
                             with st.spinner("Loading admin data..."):
-                                res = conn.table("sentiment_feedback").select("*").execute()
+                                cursor = _conn.cursor()
+                                cursor.execute(f"SELECT * FROM {SQL_TABLE}")
+                                rows = cursor.fetchall()
+                                columns = [d[0] for d in cursor.description] if cursor.description else []
                                 
-                                if res.data:
-                                    df = pd.DataFrame(res.data)
+                                if rows and columns:
+                                    df = pd.DataFrame.from_records(rows, columns=columns)
                                     
                                     # Calculate comprehensive metrics
                                     metrics = calculate_classification_metrics(df)
