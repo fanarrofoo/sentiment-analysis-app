@@ -80,7 +80,6 @@ st.sidebar.title("📌 Navigation")
 app_mode = st.sidebar.radio("Go to:", ["Sentiment Analyzer", "Project Info", "Admin Dashboard"])
 
 if app_mode == "Project Info":
-def render_user_guide() -> None:
     """Display comprehensive user guide page."""
     st.title("📖 User Guide & Instructions")
     st.write("Thank you for participating in this Kurdish NLP research. Please follow these steps to use the tool effectively.")
