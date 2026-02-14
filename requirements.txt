@@ -5,3 +5,4 @@ numpy
 pyodbc
 plotly
 scikit-learn
+sqlalchemy
