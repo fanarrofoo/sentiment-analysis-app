@@ -80,25 +80,63 @@ st.sidebar.title("📌 Navigation")
 app_mode = st.sidebar.radio("Go to:", ["Sentiment Analyzer", "Project Info", "Admin Dashboard"])
 
 if app_mode == "Project Info":
-    st.title("📖 About the Research")
-    st.info("This tool is part of a PhD study on Kurdish Natural Language Processing (NLP).")
-    st.markdown("""
-    **Goal:** To develop robust sentiment analysis models for the Kurdish language.
+def render_user_guide() -> None:
+    """Display comprehensive user guide page."""
+    st.title("📖 User Guide & Instructions")
+    st.write("Thank you for participating in this Kurdish NLP research. Please follow these steps to use the tool effectively.")
     
-    **How you can help:** 1. Enter text in various Kurdish dialects.
-    2. Review the AI's prediction.
-    3. If the AI is wrong, use the **Report Correction** tool.
+    st.divider()
+    
+    # Step 1
+    st.subheader("1. Entering Text")
+    st.write("""
+    * Type or paste your Kurdish sentence into the text area.
+    * **Note:** The model is optimized for Kurdish. Using other languages may result in inaccurate predictions.
+    * Click the **'Analyze Sentiment'** button.
     """)
+    
+    # Step 2
+    st.subheader("2. Understanding Results")
+    st.write("""
+    The AI will classify your text into one of seven categories:
+    * **Happiness / Sadness / Fear / Anger**: Standard emotional states.
+    * **Surprise**: For unexpected events.
+    * **Disgust**: For expressing strong dislike.
+    * **Sarcastic**: For sentences where the meaning is the opposite of the words used.
+    """)
+    
+    # Step 3
+    st.subheader("3. Providing Feedback (Crucial for Research)")
+    st.write("""
+    If you feel the AI made a mistake:
+    1. Scroll down to **'Report an incorrect prediction'**.
+    2. Select what you believe is the **correct** sentiment from the dropdown.
+    3. Read the **Privacy Notice** and check the **Consent Box**.
+    4. Click **'Submit Feedback'**.
+    """)
+    
+    st.info("💡 Your feedback directly helps retrain the model to better understand Kurdish linguistic nuances.")
+    
+    # Step 4
+    st.subheader("4. Technical FAQ")
+    with st.expander("Is my data saved?"):
+        st.write("Only if you click 'Submit Feedback'. Regular analysis is not permanently logged.")
+    
+    with st.expander("Why did it get my sentence wrong?"):
+        st.write("Sentiment analysis is complex, especially in Kurdish due to various dialects. Your corrections help the AI learn these differences!")
+    
+    st.success("Ready to start? Switch to 'Sentiment Analyzer' in the sidebar!")
 
 elif app_mode == "Sentiment Analyzer":
     st.title("Kurdish Sentiment Analysis")
-    st.caption("PhD Research Project | Fanar Rofoo")
+    st.write("By Fanar Rofoo | PhD Research Project. Supervised by: Prof. Dr. Shareef M. Shareef, Dr. Polla Fattah")
+    st.write(" ")
     
     with st.expander("🔐 Data Privacy Notice"):
         st.write("Your input is stored anonymously for model training purposes only. No personal identifiers are collected.")
 
     # Input Area
-    user_input = st.text_area("Enter a Kurdish sentence:", height=150, placeholder="Min zor dڵxoşim...")
+    user_input = st.text_area("Enter a Kurdish sentence:", height=150, placeholder="Only Kurdish Unicode تەنها یونیکۆدى کوردى")
 
     # Analysis Button
     if st.button("Analyze Sentiment", type="primary", use_container_width=True):
