@@ -35,14 +35,15 @@ st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="wide")
 # --- 2. Database Connection ---
 def get_db_connection():
     try:
-        # We use a short TTL to ensure we don't cache a broken connection
+        # Use st.connection with a specific dial-in to handle the custom port
+        # No changes needed here if your Secrets URL is formatted correctly as shown above
         conn = st.connection("sqlserver", type="sql", ttl=0)
         return conn
     except Exception as e:
-        # This will print the specific error to your sidebar for debugging
-        st.sidebar.warning("📡 Database Connection Issue")
-        logger.error(f"Detailed Connection Error: {e}")
+        logger.error(f"SQL Connection Error: {str(e)}")
         return None
+
+
 # --- 3. Utility Functions ---
 def initialize_session_state():
     defaults = {
