@@ -1,7 +1,7 @@
 streamlit
-scikit-learn
-supabase
-st-supabase-connection
 joblib
-plotly
+pandas
 numpy
+pyodbc
+plotly
+scikit-learn
