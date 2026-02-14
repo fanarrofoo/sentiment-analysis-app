@@ -185,6 +185,13 @@ elif app_mode == "Admin Dashboard":
             st.rerun()
             
         if db:
+    try:
+        with db.session as s:
+            # This asks the database: "Who am I?"
+            identity = s.execute(text("SELECT SYSTEM_USER, CURRENT_USER")).fetchone()
+            st.warning(f"🕵️ Debug Info -- Login: '{identity[0]}' | Mapped User: '{identity[1]}'")
+            
+            # ... rest of your code ...
             try:
                 # Fetch Data
                 df = db.query("SELECT * FROM MyData", ttl=0)
