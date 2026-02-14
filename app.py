@@ -35,23 +35,37 @@ st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="wide")
 # --- 2. Database Connection ---
 def get_db_connection():
     try:
-        # We use st.connection but wrap it in a custom check
-        conn = st.connection("sqlserver", type="sql", ttl=0)
-        
-        # Test if the server is actually reachable before returning
-        with conn.session as s:
-            s.execute(text("SELECT 1"))
+        # Use st.connection with "pool_pre_ping" to handle drops
+        conn = st.connection(
+            "sqlserver", 
+            type="sql", 
+            ttl=0, 
+            pool_pre_ping=True
+        )
         return conn
     except Exception as e:
-        # This will help you see if it's a timeout vs a login error
-        error_str = str(e)
-        if "Login timeout" in error_str:
-            st.sidebar.error("📡 Network Timeout: Port 1744 is blocked or the server is offline.")
-        elif "Login failed" in error_str:
-            st.sidebar.error("🔑 Auth Error: Username or Password incorrect.")
-        else:
-            st.sidebar.error(f"⚠️ Connection Error: {error_str[:100]}...")
+        logger.error(f"SQL Connection Error: {str(e)}")
         return None
+
+# --- Inside the Feedback Section ---
+if st.button("Submit Feedback", disabled=not consent):
+    if db:
+        try:
+            # Using the 'with' block ensures the session is closed correctly
+            with db.session as s:
+                # Use standard SQL Parameter markers (?) for pyodbc
+                sql = text("INSERT INTO MyData (user_input, model_prediction, correct_label) VALUES (:ui, :mp, :cl)")
+                s.execute(sql, {
+                    "ui": st.session_state.user_input, 
+                    "mp": int(st.session_state.prediction), 
+                    "cl": int(correct_label)
+                })
+                s.commit()
+            st.success("✅ Thank you! Feedback logged.")
+        except Exception as e:
+            st.error(f"❌ Handshake failed: {str(e)}")
+    else:
+        st.error("❌ Database connection unavailable.")
 
 # --- 3. Utility Functions ---
 def initialize_session_state():
