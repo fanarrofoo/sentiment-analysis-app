@@ -37,6 +37,7 @@ def get_db_connection():
     Uses 'ttl=0' to prevent stale connections in Streamlit Cloud.
     """
     try:
+        # We use the connection defined in secrets.toml [connections.sqlserver]
         conn = st.connection("sqlserver", type="sql", ttl=0)
         return conn
     except Exception as e:
@@ -66,7 +67,8 @@ def calculate_confidence(decision_scores, prediction_idx):
 if 'prediction' not in st.session_state:
     st.session_state.update({
         'prediction': None, 'label': None, 'confidence': 0.0,
-        'current_color': "#f0f2f6", 'user_input': "", 'probabilities': None
+        'current_color': "#f0f2f6", 'user_input': "", 'probabilities': None,
+        'admin_logged_in': False
     })
 
 # --- 7. Main Application Logic ---
@@ -149,7 +151,8 @@ elif app_mode == "Sentiment Analyzer":
                     try:
                         with db.session as s:
                             # Using parameterized query for security
-                            query = text("INSERT INTO MyData (user_input, model_prediction, correct_label) VALUES (:ui, :mp, :cl)")
+                            # Explicitly using [dbo].[MyData] to avoid schema confusion
+                            query = text("INSERT INTO [dbo].[MyData] (user_input, model_prediction, correct_label) VALUES (:ui, :mp, :cl)")
                             s.execute(query, {
                                 "ui": st.session_state.user_input, 
                                 "mp": st.session_state.prediction, 
@@ -158,8 +161,7 @@ elif app_mode == "Sentiment Analyzer":
                             s.commit()
                         st.success("✅ Feedback saved! Thank you for contributing.")
                     except Exception as e:
-                        st.error("❌ Database Error. Please try again later.")
-                        logger.error(f"Feedback Insert Error: {e}")
+                        st.error(f"❌ Database Error: {e}")
                 else:
                     st.error("⚠️ Database connection is currently unavailable.")
 
@@ -167,13 +169,11 @@ elif app_mode == "Admin Dashboard":
     st.title("🔐 Admin Dashboard")
     
     # Simple Login System
-    if "admin_logged_in" not in st.session_state:
-        st.session_state.admin_logged_in = False
-
     if not st.session_state.admin_logged_in:
         pwd = st.text_input("Admin Password", type="password")
         if st.button("Login"):
-            if pwd == st.secrets.get("ADMIN_PASSWORD", "admin123"): # Default fallback
+            # Ensure ADMIN_PASSWORD is set in secrets
+            if pwd == st.secrets.get("ADMIN_PASSWORD", "admin123"): 
                 st.session_state.admin_logged_in = True
                 st.rerun()
             else:
@@ -183,18 +183,28 @@ elif app_mode == "Admin Dashboard":
         if st.button("Logout"):
             st.session_state.admin_logged_in = False
             st.rerun()
-            
+        
+        st.divider()
+
         if db:
-    try:
-        with db.session as s:
-            # This asks the database: "Who am I?"
-            identity = s.execute(text("SELECT SYSTEM_USER, CURRENT_USER")).fetchone()
-            st.warning(f"🕵️ Debug Info -- Login: '{identity[0]}' | Mapped User: '{identity[1]}'")
-            
-            # ... rest of your code ...
+            # --- IDENTITY CHECK (DEBUGGING BLOCK) ---
             try:
-                # Fetch Data
-                df = db.query("SELECT * FROM MyData", ttl=0)
+                with db.session as s:
+                    # This query reveals exactly WHO the database thinks is connected
+                    identity = s.execute(text("SELECT SUSER_NAME() as LoginName, USER_NAME() as UserName")).fetchone()
+                    
+                    st.info(f"👤 **Connection Identity:** Login=`{identity[0]}` | User=`{identity[1]}`")
+                    
+                    # If mapped to 'guest', warn the user
+                    if identity[1] == 'guest':
+                        st.error("⚠️ CRITICAL ISSUE: Your login is mapping to the 'guest' user! You need to fix User Mapping in SQL Server.")
+            except Exception as e:
+                st.warning(f"Could not verify identity: {e}")
+            # ----------------------------------------
+
+            try:
+                # Explicitly using [dbo].[MyData]
+                df = db.query("SELECT * FROM [dbo].[MyData]", ttl=0)
                 
                 if not df.empty:
                     c1, c2 = st.columns(2)
