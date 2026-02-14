@@ -31,16 +31,13 @@ st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="wide")
 
 # --- 2. Database Connection (The Modern Way) ---
 def get_db_connection():
-    """
-    Connects using Streamlit's native SQL connection.
-    Requires 'connections.sqlserver' in .streamlit/secrets.toml
-    """
     try:
-        # Streamlit 1.28+ built-in connection handling
+        # This will attempt to connect and cache the connection
         conn = st.connection("sqlserver", type="sql")
         return conn
     except Exception as e:
-        logger.error(f"Database connection error: {e}")
+        # This will show you the EXACT error on the app interface
+        st.sidebar.error(f"DB Error: {str(e)}")
         return None
 
 # --- 3. Utility Functions ---
