@@ -71,9 +71,9 @@ if 'prediction' not in st.session_state:
         'confidence': 0.0,
         'current_color': "#f0f2f6", 
         'user_input': "", 
-        'text_input_key': "", # Initializes the text area key
         'probabilities': None,
-        'admin_logged_in': False
+        'admin_logged_in': False,
+        'reset_counter': 0  # Used to dynamically reset the text area
     })
 
 # --- 7. Main Application Logic ---
@@ -138,19 +138,19 @@ elif app_mode == "Sentiment Analyzer":
     with st.expander("🔐 Data Privacy Notice"):
         st.write("Your input is stored anonymously for model training purposes only. No personal identifiers are collected.")
 
-    # Input Area - Using the session_state key to allow programmatic clearing
+    # Input Area - Using a dynamic key to allow programmatic clearing without errors
     user_input = st.text_area(
         "Enter a Kurdish sentence:", 
         height=150, 
         placeholder="Only Kurdish Unicode تەنها یونیکۆدى کوردى",
-        key="text_input_key"
+        key=f"text_input_{st.session_state.reset_counter}"
     )
 
     # Analysis Button
     if st.button("Analyze Sentiment", type="primary", use_container_width=True):
-        if st.session_state.text_input_key.strip():
+        if user_input.strip():
             # 1. Transform input
-            vec = tfidf.transform([st.session_state.text_input_key])
+            vec = tfidf.transform([user_input])
             
             # 2. Predict
             pred_id = int(model.predict(vec)[0])
@@ -163,7 +163,7 @@ elif app_mode == "Sentiment Analyzer":
                 'label': SENTIMENT_MAP[pred_id],
                 'confidence': conf,
                 'current_color': COLOR_MAP[pred_id],
-                'user_input': st.session_state.text_input_key,
+                'user_input': user_input, # Store the input for the DB
                 'probabilities': probs
             })
             st.rerun()
@@ -220,8 +220,8 @@ elif app_mode == "Sentiment Analyzer":
                     # --- RESET APP STATE ---
                     st.session_state.prediction = None
                     st.session_state.label = None
-                    st.session_state.text_input_key = "" # Clears the text area
                     st.session_state.user_input = ""
+                    st.session_state.reset_counter += 1 # Increments key, clearing the text box
                     st.rerun() # Immediately reloads the app back to starting state
                     
                 except Exception as e:
