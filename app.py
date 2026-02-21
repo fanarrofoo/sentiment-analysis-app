@@ -66,8 +66,13 @@ def calculate_confidence(decision_scores, prediction_idx):
 # --- 6. Session State Initialization ---
 if 'prediction' not in st.session_state:
     st.session_state.update({
-        'prediction': None, 'label': None, 'confidence': 0.0,
-        'current_color': "#f0f2f6", 'user_input': "", 'probabilities': None,
+        'prediction': None, 
+        'label': None, 
+        'confidence': 0.0,
+        'current_color': "#f0f2f6", 
+        'user_input': "", 
+        'text_input_key': "", # Initializes the text area key
+        'probabilities': None,
         'admin_logged_in': False
     })
 
@@ -107,11 +112,10 @@ if app_mode == "Project Info":
     # Step 3
     st.subheader("3. Providing Feedback (Crucial for Research)")
     st.write("""
-    If you feel the AI made a mistake:
-    1. Scroll down to **'Report an incorrect prediction'**.
-    2. Select what you believe is the **correct** sentiment from the dropdown.
-    3. Read the **Privacy Notice** and check the **Consent Box**.
-    4. Click **'Submit Feedback'**.
+    After every analysis, you will be prompted to verify the prediction:
+    1. Confirm if the AI was correct, or select the right emotion if it was wrong.
+    2. Read the **Privacy Notice** and check the **Consent Box**.
+    3. Click **'Submit Feedback'**. This will reset the app for your next sentence.
     """)
     
     st.info("💡 Your feedback directly helps retrain the model to better understand Kurdish linguistic nuances.")
@@ -134,14 +138,19 @@ elif app_mode == "Sentiment Analyzer":
     with st.expander("🔐 Data Privacy Notice"):
         st.write("Your input is stored anonymously for model training purposes only. No personal identifiers are collected.")
 
-    # Input Area
-    user_input = st.text_area("Enter a Kurdish sentence:", height=150, placeholder="Only Kurdish Unicode تەنها یونیکۆدى کوردى")
+    # Input Area - Using the session_state key to allow programmatic clearing
+    user_input = st.text_area(
+        "Enter a Kurdish sentence:", 
+        height=150, 
+        placeholder="Only Kurdish Unicode تەنها یونیکۆدى کوردى",
+        key="text_input_key"
+    )
 
     # Analysis Button
     if st.button("Analyze Sentiment", type="primary", use_container_width=True):
-        if user_input.strip():
+        if st.session_state.text_input_key.strip():
             # 1. Transform input
-            vec = tfidf.transform([user_input])
+            vec = tfidf.transform([st.session_state.text_input_key])
             
             # 2. Predict
             pred_id = int(model.predict(vec)[0])
@@ -154,14 +163,14 @@ elif app_mode == "Sentiment Analyzer":
                 'label': SENTIMENT_MAP[pred_id],
                 'confidence': conf,
                 'current_color': COLOR_MAP[pred_id],
-                'user_input': user_input,
+                'user_input': st.session_state.text_input_key,
                 'probabilities': probs
             })
             st.rerun()
         else:
             st.warning("⚠️ Please enter some text first.")
 
-    # Result Display
+    # Result Display & Feedback Mechanism
     if st.session_state.prediction is not None:
         st.divider()
         st.markdown(f"""
@@ -175,32 +184,50 @@ elif app_mode == "Sentiment Analyzer":
         st.write(f"**Confidence:** {st.session_state.confidence:.1f}%")
         st.progress(st.session_state.confidence / 100)
 
-        # Feedback Mechanism
-        with st.expander("🛠️ Report Incorrect Prediction"):
-            st.write("Is the AI wrong? Help us improve.")
-            correct_label = st.selectbox("Select the correct emotion:", options=list(SENTIMENT_MAP.keys()), 
-                                         format_func=lambda x: SENTIMENT_MAP[x])
+        # Mandatory Feedback UI
+        st.divider()
+        st.subheader("📝 Provide Feedback")
+        st.write("Help us improve! Please confirm if the AI's prediction is correct.")
+        
+        is_correct = st.radio("Is the predicted emotion correct?", ["Yes, it's correct", "No, it's wrong"], horizontal=True)
+        
+        if is_correct == "Yes, it's correct":
+            final_label = st.session_state.prediction
+        else:
+            final_label = st.selectbox(
+                "Select the correct emotion:", 
+                options=list(SENTIMENT_MAP.keys()), 
+                format_func=lambda x: SENTIMENT_MAP[x]
+            )
             
-            consent = st.checkbox("I consent to this text being used for retraining.")
-            
-            if st.button("Submit Correction", disabled=not consent):
-                if db:
-                    try:
-                        with db.session as s:
-                            # Using parameterized query for security
-                            # Explicitly using [dbo].[MyData] to avoid schema confusion
-                            query = text("INSERT INTO [dbo].[MyData] (user_input, model_prediction, correct_label) VALUES (:ui, :mp, :cl)")
-                            s.execute(query, {
-                                "ui": st.session_state.user_input, 
-                                "mp": st.session_state.prediction, 
-                                "cl": correct_label
-                            })
-                            s.commit()
-                        st.success("✅ Feedback saved! Thank you for contributing.")
-                    except Exception as e:
-                        st.error(f"❌ Database Error: {e}")
-                else:
-                    st.error("⚠️ Database connection is currently unavailable.")
+        consent = st.checkbox("I consent to this text being used for retraining.")
+        
+        if st.button("Submit Feedback", type="primary", disabled=not consent):
+            if db:
+                try:
+                    with db.session as s:
+                        query = text("INSERT INTO [dbo].[MyData] (user_input, model_prediction, correct_label) VALUES (:ui, :mp, :cl)")
+                        s.execute(query, {
+                            "ui": st.session_state.user_input, 
+                            "mp": st.session_state.prediction, 
+                            "cl": final_label
+                        })
+                        s.commit()
+                    
+                    # Show brief success message that survives the rerun
+                    st.toast("✅ Feedback saved! Thank you for contributing.", icon="🎉")
+                    
+                    # --- RESET APP STATE ---
+                    st.session_state.prediction = None
+                    st.session_state.label = None
+                    st.session_state.text_input_key = "" # Clears the text area
+                    st.session_state.user_input = ""
+                    st.rerun() # Immediately reloads the app back to starting state
+                    
+                except Exception as e:
+                    st.error(f"❌ Database Error: {e}")
+            else:
+                st.error("⚠️ Database connection is currently unavailable.")
 
 elif app_mode == "Admin Dashboard":
     st.title("🔐 Admin Dashboard")
