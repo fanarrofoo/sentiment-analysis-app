@@ -1,12 +1,3 @@
-streamlit
-pandas
-numpy
-joblib
-scikit-learn
-plotly
-pyodbc
-sqlalchemy
-
 # Core App & Machine Learning
 streamlit>=1.28.0
 joblib==1.3.2
